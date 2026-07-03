@@ -1,3 +1,7 @@
+<p align="center">
+  <a href="https://www.academy.umbra-labs.dev/"><img src="assets/logo_umbra_labs.png" alt="Umbra Labs" width="160"></a>
+</p>
+
 # 🧹 Nettoyeur d'espace disque (Drive Cleaner)
 
 > Libérez des gigaoctets sur Windows **sans jamais risquer vos données** — analyse en lecture seule, nettoyage via la Corbeille uniquement, 100 % local, open source.

@@ -23,6 +23,12 @@ import { execFile } from 'node:child_process';
 import path from 'node:path';
 import { runFullScan, type PipelineOptions, type ScanSummary } from './pipeline.ts';
 import { cleanToRecycleBin, type CleanTarget, type CleanResult } from './cleaner.ts';
+import { FAVICON_ICO_B64, LOGO_PNG_B64, SITE_URL, TWITTER_URL, TWITTER_HANDLE } from './branding.ts';
+
+// Decoded once at startup; served on /favicon.ico and /logo.png so pages
+// reference cacheable URLs instead of inflating every HTML response.
+const FAVICON = Buffer.from(FAVICON_ICO_B64, 'base64');
+const LOGO = Buffer.from(LOGO_PNG_B64, 'base64');
 
 interface CleanState {
   status: 'idle' | 'running' | 'done';
@@ -198,6 +204,16 @@ export function startServer(baseOpts: ServerOptions, port: number): Promise<void
       });
       return;
     }
+    if (url.pathname === '/favicon.ico') {
+      res.writeHead(200, { 'Content-Type': 'image/x-icon', 'Cache-Control': 'public, max-age=86400' });
+      res.end(FAVICON);
+      return;
+    }
+    if (url.pathname === '/logo.png') {
+      res.writeHead(200, { 'Content-Type': 'image/png', 'Cache-Control': 'public, max-age=86400' });
+      res.end(LOGO);
+      return;
+    }
     if (url.pathname === '/api/state') return json(200, state);
     if (url.pathname === '/api/reports') return json(200, await listReports());
     if (url.pathname === '/api/journal') return json(200, await readJournal());
@@ -354,6 +370,7 @@ function dashboardHtml(opts: ServerOptions): string {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="/favicon.ico">
 <title>Drive Cleaner</title>
 <style>
   :root {
@@ -363,7 +380,10 @@ function dashboardHtml(opts: ServerOptions): string {
   * { box-sizing: border-box; }
   body { margin: 0; padding: 24px; background: var(--bg); color: var(--text);
          font: 15px/1.55 "Segoe UI", system-ui, sans-serif; max-width: 860px; margin-inline: auto; }
-  h1 { font-size: 24px; margin: 0 0 4px; }
+  h1 { font-size: 24px; margin: 0 0 4px; display: flex; align-items: center; gap: 10px; }
+  h1 img { height: 32px; width: auto; border-radius: 6px; }
+  footer a { color: var(--muted); }
+  footer a:hover { color: var(--accent); }
   h2 { font-size: 16px; margin: 24px 0 10px; color: var(--accent); }
   .sub { color: var(--muted); margin-bottom: 18px; font-size: 13px; }
   .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 16px; }
@@ -448,7 +468,7 @@ function dashboardHtml(opts: ServerOptions): string {
 
 <!-- ===== SIMPLE MODE ===== -->
 <div id="simple">
-  <h1 id="s-title"></h1>
+  <h1><img src="/logo.png" alt="Umbra Labs"><span id="s-title"></span></h1>
   <div class="sub" id="s-subtitle"></div>
 
   <div class="panel" id="s-idle">
@@ -502,7 +522,7 @@ function dashboardHtml(opts: ServerOptions): string {
 
 <!-- ===== EXPERT MODE ===== -->
 <div id="expert" hidden>
-  <h1 id="e-title"></h1>
+  <h1><img src="/logo.png" alt="Umbra Labs"><span id="e-title"></span></h1>
   <div class="sub" id="e-subtitle"></div>
 
   <div class="panel">
@@ -538,7 +558,11 @@ function dashboardHtml(opts: ServerOptions): string {
 
 <footer>
   <span id="f-left"></span>
-  <span><a id="diag" href="/api/diagnostic"></a></span>
+  <span>
+    <a href="${SITE_URL}" target="_blank" rel="noopener">Umbra Labs</a> ·
+    <a href="${TWITTER_URL}" target="_blank" rel="noopener">${TWITTER_HANDLE}</a> ·
+    <a id="diag" href="/api/diagnostic"></a>
+  </span>
 </footer>
 
 <script>

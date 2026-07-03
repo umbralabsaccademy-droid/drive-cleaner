@@ -1,3 +1,7 @@
+<p align="center">
+  <a href="https://www.academy.umbra-labs.dev/"><img src="assets/logo_umbra_labs.png" alt="Umbra Labs" width="160"></a>
+</p>
+
 # 🧹 Drive Cleaner
 
 > Free up gigabytes on Windows **without ever risking your data** — read-only analysis, cleanup through the Recycle Bin only, 100% local, open source.

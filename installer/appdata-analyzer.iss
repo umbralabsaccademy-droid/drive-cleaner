@@ -25,7 +25,7 @@ OutputBaseFilename=drive-cleaner-setup
 Compression=lzma2
 SolidCompression=yes
 DisableProgramGroupPage=yes
-; SetupIconFile=icon.ico          ; à fournir pour une icône personnalisée
+SetupIconFile=..\assets\logo.ico
 ; SignTool=signtool               ; à configurer une fois le certificat acheté
 
 [Languages]

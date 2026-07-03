@@ -209,6 +209,7 @@ export function renderHtml(a: Analysis): string {
 <html lang="fr">
 <head>
 <meta charset="utf-8">
+<link rel="icon" href="/favicon.ico">
 <title>AppData Analyzer — ${esc(a.scanDate.slice(0, 10))}</title>
 <style>
   :root {
@@ -267,6 +268,7 @@ export function renderHtml(a: Analysis): string {
           padding: 10px 14px; margin: 14px 0; font-size: 13px; }
   ol.actions li { margin-bottom: 8px; }
   footer { color: var(--muted); font-size: 12px; margin-top: 28px; }
+  footer a { color: var(--muted); } footer a:hover { color: var(--accent); }
 </style>
 </head>
 <body>
@@ -362,6 +364,7 @@ const I18N = {
 };
 let lang = localStorage.getItem('aa-lang') || ((navigator.language || 'en').toLowerCase().startsWith('fr') ? 'fr' : 'en');
 let T = I18N[lang];
+const FOOT_LINKS = '<br><a href="https://www.academy.umbra-labs.dev/" target="_blank" rel="noopener">Umbra Labs</a> · <a href="https://x.com/xumbralabs" target="_blank" rel="noopener">@xumbralabs</a>';
 const $id = (i) => document.getElementById(i);
 const fmt = (b) => T.fmt(b);
 const pick = (fr, en) => (lang === 'en' && en ? en : fr);
@@ -394,7 +397,7 @@ function applyLang() {
   $id('h-stale').textContent = T.hStale;
   $id('th-sfolder').textContent = T.thStale.folder; $id('th-sapp').textContent = T.thStale.app;
   $id('th-ssize').textContent = T.thStale.size; $id('th-sdate').textContent = T.thStale.date;
-  $id('foot').innerHTML = T.footer;
+  $id('foot').innerHTML = T.footer + FOOT_LINKS;
   renderCards(); renderMirrors(); renderEvolution(); renderTopActions(); renderStale(); renderSections(); render();
 }
 $id('lg-fr').addEventListener('click', () => { lang = 'fr'; try { localStorage.setItem('aa-lang', lang); } catch {} applyLang(); });

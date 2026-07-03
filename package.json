@@ -1,6 +1,6 @@
-{
+﻿{
   "name": "drive-cleaner",
-  "version": "2.1.1",
+  "version": "2.1.2",
   "description": "Safe, transparent Windows disk space cleaner: read-only analysis, Recycle Bin cleanup only, 100% local, zero dependencies. Bilingual EN/FR.",
   "author": "Umbra Labs (https://www.academy.umbra-labs.dev/)",
   "license": "MIT",
