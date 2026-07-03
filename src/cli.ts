@@ -61,6 +61,20 @@ function parseArgs(argv: string[]): CliArgs {
   return args;
 }
 
+/** Is a live dashboard answering on this URL? (distinguishes a real running
+ *  instance from a port in the middle of being released) */
+async function probeAlive(url: string): Promise<boolean> {
+  try {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 1200);
+    const r = await fetch(`${url}/api/state`, { signal: ctrl.signal, cache: 'no-store' });
+    clearTimeout(t);
+    return r.ok;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Ouvre l'interface dans une FENÊTRE D'APPLICATION (sans barre d'adresse ni
  * onglets : ressemble à un vrai logiciel), avec le navigateur Chromium
@@ -120,19 +134,29 @@ async function main(): Promise<void> {
 
   if (args.serve) {
     const url = `http://localhost:${args.port}`;
-    try {
-      await startServer(args, args.port);
-      if (args.open) openAppWindow(url);
-    } catch (err) {
-      // Port already taken: an instance is running → just reopen its window
-      if (err instanceof Error && 'code' in err && (err as NodeJS.ErrnoException).code === 'EADDRINUSE') {
-        console.log(`An instance is already listening on ${url} — opening the existing window.`);
-        openAppWindow(url);
+    // The port may be held by a LIVE instance (→ open its window) or by a
+    // DYING one (admin relaunch handover: the old instance frees the port a
+    // moment after spawning us) — probe to tell them apart, retry on transient.
+    for (let attempt = 0; ; attempt++) {
+      try {
+        await startServer(args, args.port);
+        if (args.open) openAppWindow(url);
         return;
+      } catch (err) {
+        const busy = err instanceof Error && 'code' in err && (err as NodeJS.ErrnoException).code === 'EADDRINUSE';
+        if (!busy) throw err;
+        if (await probeAlive(url)) {
+          console.log(`An instance is already listening on ${url} — opening the existing window.`);
+          openAppWindow(url);
+          return;
+        }
+        if (attempt >= 10) {
+          console.error(`Port ${args.port} is busy but unresponsive — giving up. Close the stuck process or use --port.`);
+          process.exit(1);
+        }
+        await new Promise((r) => setTimeout(r, 800));
       }
-      throw err;
     }
-    return;
   }
 
   console.log(`Read-only scan of: ${args.appDataPath}`);

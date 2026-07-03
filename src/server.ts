@@ -242,21 +242,36 @@ export function startServer(baseOpts: ServerOptions, port: number): Promise<void
     }
     if (url.pathname === '/api/relaunch-admin' && req.method === 'POST') {
       if (!guarded()) return;
-      // Elevated relaunch of this same instance: UAC prompt shows up, the old
-      // instance exits to free the port before the elevated one starts.
-      // --auto-exit is essential: without it the elevated instance never dies
-      // and squats the port for every subsequent launch.
+      // Elevated relaunch of this same instance. Start-Process -Verb RunAs
+      // BLOCKS until the user answers the UAC prompt:
+      //  - refused → PowerShell errors → this instance STAYS ALIVE (the page
+      //    keeps working, just without admin);
+      //  - accepted → we free the port so the elevated instance can bind
+      //    (which itself retries while the port is being released).
+      // --auto-exit is essential: without it the elevated instance would
+      // never die and would squat the port for every subsequent launch.
+      // No --open: the requesting page polls and reloads itself.
       const isSea = !process.execPath.toLowerCase().endsWith('node.exe');
       const target = process.execPath;
       const argList = isSea
-        ? `'--serve','--port','${port}','--open','--auto-exit'`
-        : `'${process.argv[1].replace(/'/g, "''")}','--serve','--port','${port}','--open','--auto-exit'`;
-      startProgram(`Start-Process '${target.replace(/'/g, "''")}' -ArgumentList ${argList} -Verb RunAs`);
+        ? `'--serve','--port','${port}','--auto-exit'`
+        : `'${process.argv[1].replace(/'/g, "''")}','--serve','--port','${port}','--auto-exit'`;
+      execFile(
+        'powershell.exe',
+        ['-NoProfile', '-Command', `Start-Process '${target.replace(/'/g, "''")}' -ArgumentList ${argList} -Verb RunAs`],
+        { windowsHide: true, timeout: 120_000 },
+        (err) => {
+          if (err) {
+            console.log('Elevated relaunch refused or failed — staying alive.');
+            return;
+          }
+          setTimeout(() => {
+            server.close();
+            process.exit(0);
+          }, 400);
+        },
+      );
       json(200, { ok: true });
-      setTimeout(() => {
-        server.close();
-        process.exit(0);
-      }, 800);
       return;
     }
     if (url.pathname === '/api/diagnostic') {
@@ -554,6 +569,9 @@ const I18N = {
     confirmCleanExpert: (n, s) => 'Envoyer ' + n + ' élément(s) (' + s + ') à la Corbeille ?',
     cleanErrors: (l) => 'Certains éléments n\\'ont pas pu être nettoyés (fichiers en cours d\\'utilisation) — fermez les applications concernées et réessayez : ' + l,
     relaunchMsg: 'L\\'outil va se relancer : acceptez la demande d\\'autorisation de Windows, puis la page se rouvrira toute seule.',
+    relaunchWaitTitle: 'Relance en cours…',
+    relaunchWaitText: 'Acceptez la demande d\\'autorisation de Windows (écran assombri). Cette page se reconnectera automatiquement — ne la fermez pas.',
+    relaunchFail: 'La relance en administrateur semble avoir échoué ou été refusée. Relancez l\\'outil manuellement si besoin.',
     scanError: (e) => 'L\\'analyse a rencontré un problème : ' + e + '\\n\\nVous pouvez réessayer. Si cela persiste, utilisez « Exporter un diagnostic » en bas de page.',
     cleaning: 'Nettoyage en cours…',
     cleaningN: (d, t) => 'Nettoyage… (' + d + '/' + t + ')',
@@ -612,6 +630,9 @@ const I18N = {
     confirmCleanExpert: (n, s) => 'Send ' + n + ' item(s) (' + s + ') to the Recycle Bin?',
     cleanErrors: (l) => 'Some items could not be cleaned (files in use) — close the related applications and try again: ' + l,
     relaunchMsg: 'The tool will relaunch: accept the Windows permission prompt, then the page will reopen on its own.',
+    relaunchWaitTitle: 'Relaunching…',
+    relaunchWaitText: 'Accept the Windows permission prompt (dimmed screen). This page will reconnect automatically — do not close it.',
+    relaunchFail: 'The admin relaunch seems to have failed or been declined. Restart the tool manually if needed.',
     scanError: (e) => 'The analysis ran into a problem: ' + e + '\\n\\nYou can try again. If it persists, use "Export a diagnostic" at the bottom of the page.',
     cleaning: 'Cleaning…',
     cleaningN: (d, t) => 'Cleaning… (' + d + '/' + t + ')',
@@ -870,10 +891,27 @@ function showCleanDone(freed, results) {
 }
 $('s-openbin').addEventListener('click', () => api('/api/open-recycle-bin'));
 $('s-openapps').addEventListener('click', () => api('/api/open-apps-settings'));
-function relaunchAdmin() {
+async function relaunchAdmin() {
   alert(T.relaunchMsg);
   api('/api/relaunch-admin');
-  setTimeout(() => location.reload(), 6000);
+  // Waiting screen (reuses the onboarding overlay), then poll until the
+  // server is back: covers slow UAC answers AND refusals (in which case the
+  // old instance stays alive and the first poll succeeds immediately).
+  $('ob-emoji').textContent = '🛡';
+  $('ob-title').textContent = T.relaunchWaitTitle;
+  $('ob-text').textContent = T.relaunchWaitText;
+  $('ob-next').style.display = 'none';
+  $('overlay').hidden = false;
+  await new Promise((r) => setTimeout(r, 2500)); // let the exit/restart begin
+  for (let i = 0; i < 90; i++) {
+    try {
+      const r = await fetch('/api/state', { cache: 'no-store' });
+      if (r.ok) { location.reload(); return; }
+    } catch { /* server not back yet */ }
+    await new Promise((r) => setTimeout(r, 1000));
+  }
+  alert(T.relaunchFail);
+  location.reload();
 }
 
 // ===== Expert mode =====
