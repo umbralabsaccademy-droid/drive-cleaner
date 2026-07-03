@@ -1,0 +1,11 @@
+# Artefacts de build (l'exe est distribué via les Releases GitHub, pas le repo)
+dist/
+node_modules/
+
+# Sorties générées à l'exécution
+reports/
+test-fixtures/
+
+# Divers
+*.log
+Thumbs.db

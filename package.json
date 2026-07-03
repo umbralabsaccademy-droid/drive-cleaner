@@ -1,0 +1,23 @@
+{
+  "name": "nettoyeur-espace-disque",
+  "version": "2.0.0",
+  "description": "Nettoyeur d'espace disque Windows, sûr et transparent : analyse en lecture seule, nettoyage via la Corbeille uniquement, 100 % local, zéro dépendance.",
+  "author": "Umbra Labs (https://www.academy.umbra-labs.dev/)",
+  "license": "MIT",
+  "homepage": "https://www.academy.umbra-labs.dev/",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/umbra-labs/nettoyeur-espace-disque"
+  },
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "scan": "node src/cli.ts",
+    "scan:open": "node src/cli.ts --open",
+    "serve": "node src/cli.ts --serve --open",
+    "build:exe": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-exe.ps1"
+  },
+  "engines": {
+    "node": ">=22.18"
+  }
+}
