@@ -33,9 +33,15 @@ Les nettoyeurs de disque classiques sont des boîtes noires : on ne sait ni ce q
 
 ### Option 1 — Exécutable (recommandé)
 
-Téléchargez `appdata-analyzer.exe` depuis les [Releases](../../releases), puis **double-cliquez** : l'interface s'ouvre dans une fenêtre d'application (le serveur local se lance en arrière-plan et s'arrête tout seul à la fermeture).
+Téléchargez `drive-cleaner-vX.Y.Z.exe` depuis la [dernière release](../../releases/latest), puis **double-cliquez** : l'interface s'ouvre dans une fenêtre d'application (le serveur local se lance en arrière-plan et s'arrête tout seul à la fermeture).
 
-> ⚠️ **SmartScreen** : l'exécutable n'est pas signé numériquement (la signature coûte ~300 €/an). Windows affichera « application non reconnue » au premier lancement → « Informations complémentaires » → « Exécuter quand même ». C'est précisément pour ça que le code est open source : vous pouvez l'auditer et construire l'exe vous-même (option 2).
+Chaque release est **construite depuis les sources par la CI publique GitHub Actions** ([.github/workflows/release.yml](.github/workflows/release.yml)) — les logs de build sont auditables. Vérifiez votre téléchargement avec le `SHA256SUMS.txt` publié :
+
+```powershell
+Get-FileHash .\drive-cleaner-v2.1.0.exe -Algorithm SHA256
+```
+
+> ⚠️ **SmartScreen** : l'exécutable n'est pas signé numériquement (la signature coûte ~300 €/an). Windows affichera « application non reconnue » au premier lancement → « Informations complémentaires » → « Exécuter quand même ». C'est précisément pour ça que le code est open source et les builds reproductibles : auditez-le, ou construisez l'exe vous-même (option 2).
 
 ### Option 2 — Depuis les sources
 

@@ -4,6 +4,7 @@
 
 **🌍 Languages:** English (this file) · [Français](README.fr.md) — the app itself is bilingual (FR/EN, auto-detected, switchable).
 
+[![Latest release](https://img.shields.io/github/v/release/umbralabsaccademy-droid/drive-cleaner?label=download)](../../releases/latest)
 [![MIT License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 ![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-blue.svg)
 ![Node](https://img.shields.io/badge/node-%E2%89%A5%2022.18-brightgreen.svg)
@@ -44,9 +45,15 @@ Classic disk cleaners are black boxes: you don't know what they delete, why, or 
 
 ### Option 1 — Executable (recommended)
 
-Download `appdata-analyzer.exe` from the [Releases](../../releases), then **double-click**: the interface opens in an app window (the local server starts in the background and stops on its own after you close the window).
+Download `drive-cleaner-vX.Y.Z.exe` from the [latest release](../../releases/latest), then **double-click**: the interface opens in an app window (the local server starts in the background and stops on its own after you close the window).
 
-> ⚠️ **SmartScreen**: the executable is not code-signed (signing costs ~€300/year). Windows will show "unrecognized app" on first launch → "More info" → "Run anyway". That's exactly why the code is open source: you can audit it and build the exe yourself (option 2).
+Each release is **built from source by the public GitHub Actions pipeline** ([.github/workflows/release.yml](.github/workflows/release.yml)) — the build logs are auditable. Verify your download against the published `SHA256SUMS.txt`:
+
+```powershell
+Get-FileHash .\drive-cleaner-v2.1.0.exe -Algorithm SHA256
+```
+
+> ⚠️ **SmartScreen**: the executable is not code-signed (signing costs ~€300/year). Windows will show "unrecognized app" on first launch → "More info" → "Run anyway". That's exactly why the code is open source and the builds are reproducible: audit it, or build the exe yourself (option 2).
 
 ### Option 2 — From source
 

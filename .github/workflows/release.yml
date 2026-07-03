@@ -1,0 +1,56 @@
+# Builds the Windows executable and publishes it as a versioned GitHub Release.
+#
+# Trigger: push a tag like v2.1.0
+#   git tag v2.1.0 && git push origin v2.1.0
+#
+# Design choices:
+# - Only OFFICIAL actions (checkout, setup-node) + the preinstalled `gh` CLI:
+#   no third-party action in the supply chain, in line with the project's
+#   zero-dependency principle.
+# - The exe is built from source on a public runner: anyone can audit the
+#   logs and reproduce the build (`npm run build:exe`).
+# - A SHA256SUMS.txt is published next to the exe so users can verify their
+#   download: Get-FileHash .\drive-cleaner-vX.Y.Z.exe -Algorithm SHA256
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write # create the release and upload assets
+
+jobs:
+  build-release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Build executable (Node SEA)
+        shell: pwsh
+        run: ./scripts/build-exe.ps1
+
+      - name: Version the artifacts + checksums
+        shell: pwsh
+        run: |
+          $v = '${{ github.ref_name }}'
+          Copy-Item dist/appdata-analyzer.exe "dist/drive-cleaner-$v.exe"
+          $h = Get-FileHash "dist/drive-cleaner-$v.exe" -Algorithm SHA256
+          "$($h.Hash.ToLower())  drive-cleaner-$v.exe" | Out-File dist/SHA256SUMS.txt -Encoding ascii
+          Get-Content dist/SHA256SUMS.txt
+
+      - name: Create GitHub Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $v = '${{ github.ref_name }}'
+          gh release create $v `
+            "dist/drive-cleaner-$v.exe" `
+            "dist/SHA256SUMS.txt" `
+            --title "Drive Cleaner $v" `
+            --generate-notes
