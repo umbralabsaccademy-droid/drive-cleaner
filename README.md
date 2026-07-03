@@ -50,8 +50,8 @@ Téléchargez `appdata-analyzer.exe` depuis les [Releases](../../releases), puis
 Prérequis : [Node.js](https://nodejs.org/) ≥ 22.18 (exécution TypeScript native). Aucune dépendance à installer.
 
 ```powershell
-git clone https://github.com/umbra-labs/nettoyeur-espace-disque.git
-cd nettoyeur-espace-disque
+git clone https://github.com/umbralabsaccademy-droid/drive-cleaner.git
+cd drive-cleaner
 
 npm run serve        # tableau de bord web → http://localhost:7113
 npm run scan:open    # ou : scan console + rapport HTML
