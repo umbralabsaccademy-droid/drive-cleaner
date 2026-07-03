@@ -124,9 +124,9 @@ async function main(): Promise<void> {
       await startServer(args, args.port);
       if (args.open) openAppWindow(url);
     } catch (err) {
-      // Port déjà pris : une instance tourne déjà → on rouvre simplement la fenêtre
+      // Port already taken: an instance is running → just reopen its window
       if (err instanceof Error && 'code' in err && (err as NodeJS.ErrnoException).code === 'EADDRINUSE') {
-        console.log(`Une instance ecoute deja sur ${url} — ouverture de la fenetre existante.`);
+        console.log(`An instance is already listening on ${url} — opening the existing window.`);
         openAppWindow(url);
         return;
       }
@@ -135,20 +135,20 @@ async function main(): Promise<void> {
     return;
   }
 
-  console.log(`Scan lecture seule de : ${args.appDataPath}`);
-  console.log('(aucun fichier ne sera modifie ni supprime)\n');
+  console.log(`Read-only scan of: ${args.appDataPath}`);
+  console.log('(no file will be modified or deleted)\n');
 
   const summary = await runFullScan(args, (ev) => {
     const prefix = ev.type === 'phase' ? '\n' : ev.type === 'warn' ? '   [!] ' : '   ';
     console.log(prefix + ev.text);
   });
 
-  console.log(`\nScan termine en ${summary.seconds} s`);
-  console.log(`   Total AppData ajuste : ${fmt(summary.adjustedTotalBytes)}`);
-  console.log(`   Gain vert (sans risque) : ${fmt(summary.greenGainBytes)}`);
-  console.log(`   Gain jaune (precaution) : ${fmt(summary.yellowGainBytes)}`);
-  console.log(`\nRapport HTML : ${summary.htmlPath}`);
-  console.log(`Donnees JSON : ${summary.jsonPath}`);
+  console.log(`\nScan finished in ${summary.seconds}s`);
+  console.log(`   Adjusted AppData total : ${fmt(summary.adjustedTotalBytes)}`);
+  console.log(`   Green gain (no risk)   : ${fmt(summary.greenGainBytes)}`);
+  console.log(`   Yellow gain (caution)  : ${fmt(summary.yellowGainBytes)}`);
+  console.log(`\nHTML report : ${summary.htmlPath}`);
+  console.log(`JSON data   : ${summary.jsonPath}`);
 
   if (args.open) exec(`start "" "${summary.htmlPath}"`, { shell: 'cmd.exe' });
 }

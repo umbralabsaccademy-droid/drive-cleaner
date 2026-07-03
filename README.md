@@ -1,142 +1,146 @@
-# 🧹 Nettoyeur d'espace disque
+# 🧹 Drive Cleaner
 
-> Libérez des gigaoctets sur Windows **sans jamais risquer vos données** — analyse en lecture seule, nettoyage via la Corbeille uniquement, 100 % local, open source.
+> Free up gigabytes on Windows **without ever risking your data** — read-only analysis, cleanup through the Recycle Bin only, 100% local, open source.
 
-[![Licence MIT](https://img.shields.io/badge/licence-MIT-green.svg)](LICENSE)
-![Plateforme](https://img.shields.io/badge/plateforme-Windows%2010%2F11-blue.svg)
+**🌍 Languages:** English (this file) · [Français](README.fr.md) — the app itself is bilingual (FR/EN, auto-detected, switchable).
+
+[![MIT License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-blue.svg)
 ![Node](https://img.shields.io/badge/node-%E2%89%A5%2022.18-brightgreen.svg)
-![Dépendances](https://img.shields.io/badge/d%C3%A9pendances-0-orange.svg)
+![Dependencies](https://img.shields.io/badge/dependencies-0-orange.svg)
 
-Un outil [Umbra Labs](https://www.academy.umbra-labs.dev/) — [@xumbralabs](https://x.com/xumbralabs)
+An [Umbra Labs](https://www.academy.umbra-labs.dev/) tool — [@xumbralabs](https://x.com/xumbralabs)
 
 ---
 
-## Pourquoi cet outil ?
+## Why this tool?
 
-Les nettoyeurs de disque classiques sont des boîtes noires : on ne sait ni ce qu'ils suppriment, ni pourquoi, ni ce qu'ils envoient chez eux. Celui-ci prend le contre-pied :
+Classic disk cleaners are black boxes: you don't know what they delete, why, or what they phone home. This one takes the opposite stance:
 
-- 🔍 **Transparent** — chaque élément proposé est expliqué : à quelle application il appartient, pourquoi il est supprimable, ce qui se passera après. Le code est ouvert, lisez-le.
-- ♻️ **Réversible** — tout ce qui est nettoyé part dans la **Corbeille** (récupérable ~30 jours). Jamais de suppression définitive.
-- 🔒 **Local** — aucune connexion réseau sortante, aucune télémétrie, aucun compte. Le serveur web intégré n'écoute que sur `127.0.0.1`.
-- 🧠 **Prudent par conception** — un dossier inconnu n'est **jamais** classé « supprimable sans risque ». Les profils, mots de passe, wallets et données utilisateur sont détectés et intouchables.
-- 📦 **Zéro dépendance** — Node.js standard uniquement. Pas de `node_modules`, pas de supply chain à auditer.
+- 🔍 **Transparent** — every suggested item is explained: which application owns it, why it's removable, what happens afterwards. The code is open — read it.
+- ♻️ **Reversible** — everything cleaned goes to the **Recycle Bin** (recoverable for ~30 days). Never a permanent delete.
+- 🔒 **Local** — no outbound network connection, no telemetry, no account. The built-in web server only listens on `127.0.0.1`.
+- 🧠 **Cautious by design** — an unknown folder is **never** classified "safe to delete". Profiles, passwords, wallets and user data are detected and untouchable.
+- 📦 **Zero dependencies** — standard Node.js only. No `node_modules`, no supply chain to audit.
 
-## Deux modes, deux publics
+## Two modes, two audiences
 
-**Mode Simple** (par défaut) — pour tout le monde : un bouton « Analyser mon ordinateur », des explications en français courant, et seuls les éléments **certifiés sans risque** par la base de règles sont proposés. Écrans d'explication au premier lancement.
+**Simple mode** (default) — for everyone: one "Analyze my computer" button, plain-language explanations, and only items **certified safe** by the rule base are offered. Explanation screens on first launch.
 
-**Mode Expert** (sélecteur en haut à droite) — pour les technophiles : détail complet par dossier (AppData niveaux 1-2, caches développeur, zones système, applications inutilisées), catégories 🟢/🟡/🔴, commandes PowerShell prêtes à copier, rapports HTML/JSON archivables, suivi de l'évolution entre les scans, relance en admin.
+**Expert mode** (selector at the top right) — for technical users: full detail per folder (AppData levels 1-2, developer caches, system areas, unused applications), 🟢/🟡/🔴 categories, ready-to-copy PowerShell commands, archivable HTML/JSON reports, scan-over-scan evolution tracking, relaunch as admin.
 
-## Fonctionnalités
+## Features
 
-- Analyse d'**AppData** (Local, LocalLow, Roaming) avec classification par une base de ~60 règles + heuristiques prudentes
-- Détection des **miroirs MSIX** (même contenu physique compté deux fois) par comparaison d'inodes NTFS
-- **Caches développeur** : `node_modules` orphelins, caches Gradle/Maven/NuGet/pip/Expo, images d'émulateur Android, disques virtuels WSL/Docker (avec procédure de compactage)
-- **Zones système** : restes Windows Update, corbeille, dumps de crash, `hiberfil.sys`, points de restauration (admin)
-- **Applications inutilisées** : inventaire du registre croisé avec les traces d'exécution (UserAssist, Prefetch) — conseils de désinstallation, jamais d'action automatique
-- **Suivi dans le temps** : chaque scan est historisé ; le rapport montre ce qui a grossi depuis le précédent
-- **Journal des nettoyages** avec bouton « Ouvrir la Corbeille »
+- **AppData** analysis (Local, LocalLow, Roaming) classified by a base of ~60 rules + cautious heuristics
+- **MSIX mirror** detection (same physical content counted twice) through NTFS inode comparison
+- **Developer caches**: orphaned `node_modules`, Gradle/Maven/NuGet/pip/Expo caches, Android emulator images, WSL/Docker virtual disks (with the compaction procedure)
+- **System areas**: Windows Update leftovers, recycle bin, crash dumps, `hiberfil.sys`, restore points (admin)
+- **Unused applications**: registry inventory cross-checked with execution traces (UserAssist, Prefetch) — uninstall advice, never automatic action
+- **Tracking over time**: every scan is recorded; the report shows what grew since the previous one
+- **Cleanup journal** with an "Open Recycle Bin" button
+- **Bilingual UI** (English/French) — auto-detected from the browser, switchable at the top right
 
 ## Installation
 
-### Option 1 — Exécutable (recommandé)
+### Option 1 — Executable (recommended)
 
-Téléchargez `appdata-analyzer.exe` depuis les [Releases](../../releases), puis **double-cliquez** : l'interface s'ouvre dans une fenêtre d'application (le serveur local se lance en arrière-plan et s'arrête tout seul à la fermeture).
+Download `appdata-analyzer.exe` from the [Releases](../../releases), then **double-click**: the interface opens in an app window (the local server starts in the background and stops on its own after you close the window).
 
-> ⚠️ **SmartScreen** : l'exécutable n'est pas signé numériquement (la signature de code coûte ~300 €/an). Windows affichera « application non reconnue » au premier lancement → « Informations complémentaires » → « Exécuter quand même ». C'est précisément pour ça que le code est open source : vous pouvez l'auditer et construire l'exe vous-même (option 2).
+> ⚠️ **SmartScreen**: the executable is not code-signed (signing costs ~€300/year). Windows will show "unrecognized app" on first launch → "More info" → "Run anyway". That's exactly why the code is open source: you can audit it and build the exe yourself (option 2).
 
-### Option 2 — Depuis les sources
+### Option 2 — From source
 
-Prérequis : [Node.js](https://nodejs.org/) ≥ 22.18 (exécution TypeScript native). Aucune dépendance à installer.
+Prerequisite: [Node.js](https://nodejs.org/) ≥ 22.18 (native TypeScript execution). No dependencies to install.
 
 ```powershell
 git clone https://github.com/umbralabsaccademy-droid/drive-cleaner.git
 cd drive-cleaner
 
-npm run serve        # tableau de bord web → http://localhost:7113
-npm run scan:open    # ou : scan console + rapport HTML
-npm run build:exe    # construire votre propre exe (dist\appdata-analyzer.exe)
+npm run serve        # web dashboard → http://localhost:7113
+npm run scan:open    # or: console scan + HTML report
+npm run build:exe    # build your own exe (dist\appdata-analyzer.exe)
 ```
 
-`build:exe` utilise Node SEA (Single Executable Application) : `esbuild` bundle les sources, `postject` injecte le résultat dans une copie de `node.exe` — outils invoqués en one-shot via `npx`, rien n'est ajouté au projet.
+`build:exe` uses Node SEA (Single Executable Application): `esbuild` bundles the sources, `postject` injects the result into a copy of `node.exe` — both tools are invoked one-shot via `npx`, nothing is added to the project.
 
-### Options de ligne de commande
+### Command-line options
 
 ```
 appdata-analyzer [--serve] [--port 7113] [--open] [--auto-exit]
-                 [--path <AppData>] [--out <dossier>] [--workspaces <dossier>]
+                 [--path <AppData>] [--out <folder>] [--workspaces <folder>]
                  [--skip dev,system,apps,history] [--concurrency 32]
 ```
 
-Lancez en **administrateur** pour mesurer aussi la corbeille complète, les zones Windows, les points de restauration et le Prefetch (un bouton « Relancer en admin » existe aussi dans l'interface).
+Run as **administrator** to also measure the full recycle bin, Windows areas, restore points and Prefetch (a "Relaunch as admin" button also exists in the UI).
 
-## Le contrat de sécurité
+## The safety contract
 
-C'est la partie importante. L'outil s'engage sur quatre garanties, vérifiables dans le code :
+This is the part that matters. The tool commits to four guarantees, verifiable in the code:
 
-| Garantie | Où c'est appliqué |
+| Guarantee | Where it's enforced |
 |---|---|
-| L'**analyse** ne modifie jamais rien (lecture seule) | [src/scanner.ts](src/scanner.ts) — uniquement `readdir`/`stat` |
-| Le **nettoyage** passe exclusivement par la Corbeille | [src/cleaner.ts](src/cleaner.ts) — API .NET `SendToRecycleBin` |
-| Le serveur ne peut supprimer que des éléments **identifiés par le dernier scan** (jamais un chemin arbitraire envoyé par un client) | [src/server.ts](src/server.ts) — validation par id |
-| Un dossier **inconnu** n'est jamais « sans risque » ; le mode Simple exige une règle exacte | [src/knowledge.ts](src/knowledge.ts) + [src/actionables.ts](src/actionables.ts) |
+| The **analysis** never modifies anything (read-only) | [src/scanner.ts](src/scanner.ts) — `readdir`/`stat` only |
+| **Cleanup** goes exclusively through the Recycle Bin | [src/cleaner.ts](src/cleaner.ts) — .NET `SendToRecycleBin` API |
+| The server can only delete items **identified by the last scan** (never an arbitrary path sent by a client) | [src/server.ts](src/server.ts) — id validation |
+| An **unknown** folder is never "no risk"; Simple mode requires an exact rule | [src/knowledge.ts](src/knowledge.ts) + [src/actionables.ts](src/actionables.ts) |
 
-S'y ajoutent : serveur limité à `127.0.0.1`, endpoints d'action protégés contre le CSRF (header custom → preflight CORS), validation stricte des noms de fichiers servis (pas de traversée de chemin).
+On top of that: server bound to `127.0.0.1`, action endpoints protected against CSRF (custom header → CORS preflight), strict validation of served file names (no path traversal).
 
 ## Architecture
 
 ```
 src/
-├── cli.ts          Point d'entrée : double-clic → serveur masqué + fenêtre app ; console ; --serve
-├── pipeline.ts     Orchestration du scan complet, événements de progression
-├── scanner.ts      Parcours disque asynchrone (pool concurrent, jonctions ignorées, erreurs tolérées)
-├── knowledge.ts    ⭐ Base de règles de classification 🟢/🟡/🔴 (~60 règles + heuristiques)
-├── dedupe.ts       Détection des miroirs MSIX par inode NTFS
-├── devcaches.ts    Module caches développeur
-├── system.ts       Module zones système (détection d'élévation admin)
-├── apps.ts         Module applications installées (registre + UserAssist + Prefetch)
-├── history.ts      Historique des scans (JSONL append-only) et calcul d'évolution
-├── actionables.ts  Éléments nettoyables + garde-fous du mode simple + libellés grand public
-├── cleaner.ts      Envoi à la Corbeille (séquentiel, résultats vérifiés)
-├── report.ts       Analyse + rapport HTML autonome
-├── server.ts       Tableau de bord web (http natif, SSE, double interface simple/expert)
-└── types.ts        Types partagés
+├── cli.ts          Entry point: double-click → hidden server + app window; console; --serve
+├── pipeline.ts     Full-scan orchestration, progress events
+├── scanner.ts      Async disk walk (concurrent pool, junctions skipped, access errors tolerated)
+├── knowledge.ts    ⭐ 🟢/🟡/🔴 classification rule base (~60 rules + heuristics, FR/EN texts)
+├── dedupe.ts       MSIX mirror detection through NTFS inodes
+├── devcaches.ts    Developer caches module
+├── system.ts       System areas module (admin elevation detection)
+├── apps.ts         Installed applications module (registry + UserAssist + Prefetch)
+├── history.ts      Scan history (append-only JSONL) and evolution computation
+├── actionables.ts  Cleanable items + simple-mode guardrails + plain-language labels (FR/EN)
+├── cleaner.ts      Recycle Bin cleanup (sequential, verified results)
+├── report.ts       Analysis + self-contained bilingual HTML report
+├── server.ts       Web dashboard (native http, SSE, simple/expert dual UI, FR/EN)
+└── types.ts        Shared types
 ```
 
-## Contribuer
+## Contributing
 
-La contribution la plus utile : **enrichir la base de règles** ([src/knowledge.ts](src/knowledge.ts)). Vous connaissez un dossier d'AppData non répertorié ? Ajoutez une entrée dans `EXACT_RULES` avec la clé `root\nom` en minuscules :
+The most useful contribution: **extending the rule base** ([src/knowledge.ts](src/knowledge.ts)). You know an AppData folder that isn't listed? Add an entry to `EXACT_RULES` keyed by lowercase `root\name`:
 
 ```ts
-'roaming\\monapp': (p) => ({
+'roaming\\myapp': (p) => ({
   category: GREEN,                      // green | yellow | red
-  app: 'MonApp', dataType: 'cache',
-  note: 'Conséquence exacte de la suppression.',
-  autoRecreated: true,                  // recréé automatiquement ?
-  command: rmCmd(p),                    // uniquement si suppression pure
+  app: 'MyApp', dataType: 'cache', dataTypeEn: 'cache',
+  note: 'Conséquence exacte de la suppression.',   // French
+  noteEn: 'Exact consequence of deleting it.',     // English
+  autoRecreated: true,                  // recreated automatically?
+  command: rmCmd(p),                    // only if it's a pure deletion
 }),
 ```
 
-Règles d'or du projet : un inconnu n'est jamais 🟢, une donnée utilisateur (profil, wallet, identifiants) est toujours 🔴, et en cas de doute on choisit 🟡 avec la conséquence écrite noir sur blanc.
+Golden rules of the project: an unknown is never 🟢, user data (profiles, wallets, credentials) is always 🔴, and when in doubt choose 🟡 with the consequence spelled out. Please provide both French and English texts.
 
-Issues et pull requests bienvenues. Pas de dépendance externe — c'est un principe, pas un oubli.
+Issues and pull requests welcome. No external dependencies — that's a principle, not an oversight.
 
 ## FAQ
 
-**Pourquoi l'exe fait 83 Mo ?** Il embarque le runtime Node.js complet (Node SEA) : aucun prérequis sur votre machine en échange.
+**Why is the exe 83 MB?** It embeds the full Node.js runtime (Node SEA): zero prerequisites on your machine in exchange.
 
-**Mon antivirus tique.** Exe non signé + construit par injection dans node.exe = heuristiques parfois grognonnes. Le code est ouvert, construisez l'exe vous-même si vous préférez.
+**My antivirus flags it.** Unsigned exe + built by injecting into node.exe = occasionally grumpy heuristics. The code is open — build the exe yourself if you prefer.
 
-**Des données sont-elles envoyées quelque part ?** Non. Aucune requête réseau sortante — vérifiable dans le code (le seul serveur est local).
+**Is any data sent anywhere?** No. No outbound network request — verifiable in the code (the only server is local).
 
-**Les fichiers nettoyés reviennent !** C'est normal : caches et fichiers temporaires se régénèrent avec l'usage. L'outil vous le dit honnêtement — repassez tous les deux-trois mois.
+**The cleaned files come back!** That's normal: caches and temp files regenerate with use. The tool tells you so honestly — come back every two or three months.
 
-**Linux/macOS ?** Non — l'outil est spécifique à Windows (AppData, Corbeille, registre, MSIX).
+**Linux/macOS?** No — the tool is Windows-specific (AppData, Recycle Bin, registry, MSIX).
 
-## Licence
+## License
 
-[MIT](LICENSE) — faites-en ce que vous voulez : utiliser, modifier, redistribuer, y compris commercialement. Gardez juste la notice de licence.
+[MIT](LICENSE) — do whatever you want with it: use, modify, redistribute, commercially included. Just keep the license notice.
 
 ---
 
-Créé par **[Umbra Labs](https://www.academy.umbra-labs.dev/)** · Suivez [@xumbralabs](https://x.com/xumbralabs) pour les mises à jour · ⭐ si l'outil vous a libéré des gigas !
+Built by **[Umbra Labs](https://www.academy.umbra-labs.dev/)** · Follow [@xumbralabs](https://x.com/xumbralabs) for updates · ⭐ if this tool freed up some gigabytes!

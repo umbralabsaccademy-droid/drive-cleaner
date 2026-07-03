@@ -24,6 +24,12 @@ export interface Actionable {
   /** Libellé grand public (mode simple). */
   friendlyLabel: string;
   friendlyNote: string;
+  /** Versions anglaises des libellés grand public. */
+  friendlyLabelEn: string;
+  friendlyNoteEn: string;
+  /** Notes techniques (mode expert), FR + EN. */
+  note: string;
+  noteEn: string;
   path: string;
   sizeBytes: number;
   category: Category;
@@ -55,34 +61,52 @@ function parseDelete(command?: string): { mode: 'dir' | 'contents'; target: stri
   return null;
 }
 
-/** Libellé grand public à partir du type de données et de l'application. */
-function friendly(app: string, dataType: string, autoRecreated: boolean): { label: string; note: string } {
+/** Libellés grand public (FR + EN) à partir du type de données et de l'application. */
+function friendly(app: string, dataType: string, autoRecreated: boolean): { label: string; note: string; labelEn: string; noteEn: string } {
   const t = dataType.toLowerCase();
   const recree = autoRecreated
     ? 'Sans danger : ils seront recréés automatiquement si besoin.'
     : 'Sans danger pour vos documents et réglages.';
+  const safeEn = autoRecreated
+    ? 'Safe: they will be recreated automatically if needed.'
+    : 'Safe for your documents and settings.';
   if (t.includes('installeurs de mise à jour')) {
-    return { label: `Anciens fichiers de mise à jour — ${app}`, note: `Des copies d'installation déjà utilisées. ${recree}` };
+    return {
+      label: `Anciens fichiers de mise à jour — ${app}`, note: `Des copies d'installation déjà utilisées. ${recree}`,
+      labelEn: `Old update files — ${app}`, noteEn: `Installer copies that were already used. ${safeEn}`,
+    };
   }
   if (t.includes('restes')) {
-    return { label: `Restes d'un programme désinstallé — ${app}`, note: 'Ce programme n\'est plus installé : ces fichiers ne servent plus à rien.' };
+    return {
+      label: `Restes d'un programme désinstallé — ${app}`, note: 'Ce programme n\'est plus installé : ces fichiers ne servent plus à rien.',
+      labelEn: `Leftovers from an uninstalled program — ${app}`, noteEn: 'This program is no longer installed: these files serve no purpose anymore.',
+    };
   }
   if (t.includes('cache')) {
-    return { label: `Fichiers temporaires — ${app}`, note: `${app} garde des copies pour aller plus vite ; il les refera tout seul. ${recree}` };
+    return {
+      label: `Fichiers temporaires — ${app}`, note: `${app} garde des copies pour aller plus vite ; il les refera tout seul. ${recree}`,
+      labelEn: `Temporary files — ${app}`, noteEn: `${app} keeps copies to run faster; it will rebuild them on its own. ${safeEn}`,
+    };
   }
   if (t.includes('dumps') || t.includes('rapports de crash') || t.includes('télémétrie') || t.includes('logs')) {
-    return { label: `Rapports techniques — ${app}`, note: `Des fichiers de diagnostic qui ne servent plus. ${recree}` };
+    return {
+      label: `Rapports techniques — ${app}`, note: `Des fichiers de diagnostic qui ne servent plus. ${recree}`,
+      labelEn: `Technical reports — ${app}`, noteEn: `Diagnostic files that are no longer needed. ${safeEn}`,
+    };
   }
   if (t.includes('windows update') || t.includes('mises à jour')) {
-    return { label: 'Restes de mises à jour Windows', note: 'Les mises à jour sont déjà installées : ces copies ne servent plus.' };
+    return {
+      label: 'Restes de mises à jour Windows', note: 'Les mises à jour sont déjà installées : ces copies ne servent plus.',
+      labelEn: 'Windows Update leftovers', noteEn: 'The updates are already installed: these copies are no longer needed.',
+    };
   }
   if (t.includes('temporaires') || t.includes('fichiers supprimés')) {
-    return { label: `Fichiers temporaires — ${app}`, note: `Des fichiers de travail provisoires. ${recree}` };
+    return {
+      label: `Fichiers temporaires — ${app}`, note: `Des fichiers de travail provisoires. ${recree}`,
+      labelEn: `Temporary files — ${app}`, noteEn: `Short-lived working files. ${safeEn}`,
+    };
   }
-  if (t.includes('cache')) {
-    return { label: `Fichiers temporaires — ${app}`, note: `${app} garde des copies pour aller plus vite ; il les refera tout seul. ${recree}` };
-  }
-  return { label: `Fichiers de ${app}`, note: recree };
+  return { label: `Fichiers de ${app}`, note: recree, labelEn: `${app} files`, noteEn: safeEn };
 }
 
 /**
@@ -103,6 +127,10 @@ export function buildActionables(a: Analysis): Actionable[] {
       label,
       friendlyLabel: f.label,
       friendlyNote: f.note,
+      friendlyLabelEn: f.labelEn,
+      friendlyNoteEn: f.noteEn,
+      note: cls.note,
+      noteEn: cls.noteEn ?? cls.note,
       path,
       sizeBytes,
       category: cls.category,
@@ -137,8 +165,8 @@ export function buildActionables(a: Analysis): Actionable[] {
     for (const f of s.findings) {
       if (f.category === 'red' || !f.command) continue;
       const pseudo: Classification = {
-        category: f.category, app: f.label, dataType: f.dataType,
-        note: f.note, autoRecreated: true, command: f.command, known: true,
+        category: f.category, app: f.label, dataType: f.dataType, dataTypeEn: f.dataTypeEn,
+        note: f.note, noteEn: f.noteEn, autoRecreated: true, command: f.command, known: true,
       };
       // dev : jamais en mode simple (un novice n'a rien à faire dans node_modules) ;
       // system : 🟢 éligibles mais souvent admin — signalé.

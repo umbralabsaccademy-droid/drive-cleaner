@@ -1,13 +1,16 @@
 /**
- * Construction du modèle d'analyse et génération du rapport.
+ * Analysis model construction and report generation.
  *
- * Choix techniques :
- * - Le rapport HTML est un fichier UNIQUE et autonome (CSS + JS inline, données
- *   embarquées en JSON) : il s'ouvre d'un double-clic, sans serveur, et reste
- *   archivable pour comparer deux scans dans le temps.
- * - Les gains 🟢/🟡 sont calculés SANS double compte : un dossier entièrement
- *   🟢 compte en bloc ; pour un dossier mixte, seuls ses enfants 🟢/🟡 comptent.
- * - Les miroirs MSIX détectés sont exclus du total ajusté et signalés.
+ * Technical choices:
+ * - The HTML report is a SINGLE self-contained file (inline CSS + JS, data
+ *   embedded as JSON): it opens with a double-click, no server needed, and
+ *   stays archivable to compare two scans over time.
+ * - 🟢/🟡 gains are computed WITHOUT double counting: a fully-🟢 folder counts
+ *   as a whole; for a mixed folder only its 🟢/🟡 children count.
+ * - Detected MSIX mirrors are excluded from the adjusted total and flagged.
+ * - The report is bilingual (FR/EN): every data string carries both languages
+ *   (note/noteEn…), the chrome uses an embedded dictionary, and a language
+ *   switch is rendered top-right (auto-detected, persisted).
  */
 import { writeFile, mkdir } from 'node:fs/promises';
 import path from 'node:path';
@@ -17,7 +20,7 @@ import type { MsixMirror } from './dedupe.ts';
 import type { Section } from './types.ts';
 import type { Evolution } from './history.ts';
 
-// ---------- Modèle d'analyse ----------
+// ---------- Analysis model ----------
 
 export interface AnalyzedChild extends ChildEntry {
   classification: Classification;
@@ -26,9 +29,9 @@ export interface AnalyzedChild extends ChildEntry {
 export interface AnalyzedEntry extends Omit<TopEntry, 'children'> {
   classification: Classification;
   children: AnalyzedChild[];
-  /** Ce dossier est-il un miroir MSIX (déjà compté sous Packages) ? */
+  /** Is this folder an MSIX mirror (already counted under Packages)? */
   isMsixMirror: boolean;
-  /** Inutilisé depuis plus de 6 mois ? */
+  /** Unused for more than 6 months? */
   isStale: boolean;
 }
 
@@ -38,6 +41,7 @@ export interface TopAction {
   sizeBytes: number;
   category: Category;
   note: string;
+  noteEn?: string;
   command?: string;
 }
 
@@ -52,18 +56,18 @@ export interface Analysis {
   mirrors: MsixMirror[];
   topActions: TopAction[];
   staleApps: Array<{ root: string; name: string; sizeBytes: number; newest: string; app: string }>;
-  /** Sections des modules complémentaires (caches dev, système, applications). */
+  /** Sections from the complementary modules (dev caches, system, apps). */
   sections: Section[];
-  /** Delta par rapport au scan précédent, null au premier scan. */
+  /** Delta against the previous scan, null on the first scan. */
   evolution: Evolution | null;
 }
 
 const SIX_MONTHS_MS = 183 * 24 * 3600 * 1000;
 
 /**
- * Transforme le scan brut en modèle d'analyse : classification de chaque
- * dossier et enfant, gains 🟢/🟡 sans double compte (miroirs MSIX déduits),
- * top actions, applications AppData inutilisées > 6 mois.
+ * Turns the raw scan into the analysis model: classification of every folder
+ * and child, 🟢/🟡 gains without double counting (MSIX mirrors deducted),
+ * top actions, AppData folders unused for > 6 months.
  */
 export function analyze(
   entries: TopEntry[],
@@ -93,20 +97,20 @@ export function analyze(
   const rawTotal = analyzed.reduce((s, e) => s + e.sizeBytes, 0);
   const duplicated = mirrors.reduce((s, m) => s + m.duplicatedBytes, 0);
 
-  // Gains : dossier entier si sa catégorie couvre tout, sinon somme des enfants
+  // Gains: whole folder when its category covers everything, else children sum
   let greenGain = 0;
   let yellowGain = 0;
   const actions: TopAction[] = [];
 
   for (const e of analyzed) {
-    // Miroirs MSIX : les gains sont comptés UNE fois via l'entrée Roaming
-    // (le côté Packages est classé 🔴 et n'entre jamais dans les gains) ;
-    // le total ajusté a déjà déduit le double comptage.
+    // MSIX mirrors: gains are counted ONCE through the Roaming entry
+    // (the Packages side is 🔴 and never enters the gains);
+    // the adjusted total already deducted the double count.
     if (e.classification.category === 'green') {
       greenGain += e.sizeBytes;
       actions.push({
         label: `${e.root}\\${e.name}`, path: e.path, sizeBytes: e.sizeBytes,
-        category: 'green', note: e.classification.note, command: e.classification.command,
+        category: 'green', note: e.classification.note, noteEn: e.classification.noteEn, command: e.classification.command,
       });
     } else {
       for (const c of e.children) {
@@ -115,20 +119,20 @@ export function analyze(
           if (c.sizeBytes > 10 * 1024 * 1024) {
             actions.push({
               label: `${e.root}\\${e.name}\\${c.name}`, path: c.path, sizeBytes: c.sizeBytes,
-              category: 'green', note: c.classification.note, command: c.classification.command,
+              category: 'green', note: c.classification.note, noteEn: c.classification.noteEn, command: c.classification.command,
             });
           }
         } else if (c.classification.category === 'yellow' && c.classification.command) {
-          // 🟡 actionnable identifié précisément (ex. vm_bundles)
+          // 🟡 precisely identified as actionable (e.g. vm_bundles)
           yellowGain += c.sizeBytes;
           actions.push({
             label: `${e.root}\\${e.name}\\${c.name}`, path: c.path, sizeBytes: c.sizeBytes,
-            category: 'yellow', note: c.classification.note, command: c.classification.command,
+            category: 'yellow', note: c.classification.note, noteEn: c.classification.noteEn, command: c.classification.command,
           });
         }
       }
       if (e.classification.category === 'yellow' && e.classification.command) {
-        // 🟡 actionnable au niveau 1 (ex. ms-playwright) : taille moins les enfants déjà comptés
+        // 🟡 actionable at level 1 (e.g. ms-playwright): size minus already-counted children
         const counted = e.children
           .filter((c) => c.classification.category !== e.classification.category || c.classification.command)
           .reduce((s, c) => s + (c.classification.command ? c.sizeBytes : 0), 0);
@@ -137,16 +141,16 @@ export function analyze(
           yellowGain += remaining;
           actions.push({
             label: `${e.root}\\${e.name}`, path: e.path, sizeBytes: remaining,
-            category: 'yellow', note: e.classification.note, command: e.classification.command,
+            category: 'yellow', note: e.classification.note, noteEn: e.classification.noteEn, command: e.classification.command,
           });
         }
       }
     }
   }
 
-  // Les modules complémentaires contribuent aux gains et au top actions.
-  // Exception : les applications (désinstallation = décision lourde) restent
-  // hors des gains chiffrés pour ne pas gonfler artificiellement le résumé.
+  // Complementary modules contribute to gains and top actions.
+  // Exception: applications (uninstalling is a heavy decision) stay out of
+  // the numbered gains so the summary is not artificially inflated.
   for (const s of sections) {
     for (const f of s.findings) {
       if (s.id !== 'apps') {
@@ -154,7 +158,7 @@ export function analyze(
         else if (f.category === 'yellow' && f.command) yellowGain += f.sizeBytes;
       }
       if (f.command && f.category !== 'red' && f.sizeBytes > 50 * 1024 * 1024) {
-        actions.push({ label: f.label, path: f.path, sizeBytes: f.sizeBytes, category: f.category, note: f.note, command: f.command });
+        actions.push({ label: f.label, path: f.path, sizeBytes: f.sizeBytes, category: f.category, note: f.note, noteEn: f.noteEn, command: f.command });
       }
     }
   }
@@ -186,26 +190,26 @@ export function analyze(
   };
 }
 
-// ---------- Rendu HTML ----------
+// ---------- HTML rendering ----------
 
 function esc(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
 /**
- * Génère le rapport HTML AUTONOME (CSS + JS inline, données JSON embarquées) :
- * il s'ouvre d'un double-clic sans serveur et reste archivable pour comparer
- * deux scans dans le temps. Le tri/filtre est fait côté client.
+ * Generates the SELF-CONTAINED HTML report (inline CSS + JS, embedded JSON
+ * data): opens with a double-click, no server, archivable to compare scans.
+ * Sorting/filtering and the FR/EN language switch run client-side.
  */
 export function renderHtml(a: Analysis): string {
-  // Données embarquées : le JS client fait le tri/filtre, aucun serveur requis
+  // Embedded data: the client JS does sorting/filtering, no server required
   const data = JSON.stringify(a).replace(/</g, '\\u003c');
 
   return `<!DOCTYPE html>
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<title>AppData Analyzer — rapport du ${esc(a.scanDate.slice(0, 10))}</title>
+<title>AppData Analyzer — ${esc(a.scanDate.slice(0, 10))}</title>
 <style>
   :root {
     --bg: #12141a; --panel: #1c1f28; --panel2: #232734; --text: #e6e8ee; --muted: #9aa0b0;
@@ -229,6 +233,11 @@ export function renderHtml(a: Analysis): string {
   .toolbar button.active { border-color: var(--accent); color: var(--accent); }
   .toolbar input { background: var(--panel2); color: var(--text); border: 1px solid var(--border);
                    border-radius: 6px; padding: 6px 10px; width: 220px; }
+  #langbar { float: right; display: inline-flex; background: var(--panel2); border: 1px solid var(--border);
+             border-radius: 8px; padding: 2px; gap: 2px; }
+  #langbar button { background: transparent; color: var(--muted); border: 0; border-radius: 6px;
+                    padding: 4px 12px; font-size: 12px; font-weight: 600; cursor: pointer; }
+  #langbar button.active { background: var(--accent); color: #0d1117; }
   table { width: 100%; border-collapse: collapse; background: var(--panel);
           border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
   th, td { padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--border); }
@@ -261,86 +270,182 @@ export function renderHtml(a: Analysis): string {
 </style>
 </head>
 <body>
+<div id="langbar"><button data-l="fr" id="lg-fr">FR</button><button data-l="en" id="lg-en">EN</button></div>
 <h1>🔍 AppData Analyzer</h1>
 <div class="sub" id="subtitle"></div>
-<div style="margin:-8px 0 16px"><button class="copy" id="psadmin" style="font-size:13px;padding:6px 14px"
-  title="Ouvre une console PowerShell élevée (invite UAC) pour coller les commandes de suppression">🛡 Ouvrir PowerShell en admin</button></div>
+<div style="margin:-8px 0 16px"><button class="copy" id="psadmin" style="font-size:13px;padding:6px 14px"></button></div>
 <div class="cards" id="cards"></div>
 <div id="mirrors"></div>
 <div id="evolution"></div>
-<h2>🏆 Actions les plus rentables</h2>
+<h2 id="h-actions"></h2>
 <ol class="actions" id="topActions"></ol>
-<h2>📦 Dossiers analysés</h2>
+<h2 id="h-folders"></h2>
 <div class="toolbar">
-  <button data-f="all" class="active">Tous</button>
-  <button data-f="green">🟢 Sans risque</button>
-  <button data-f="yellow">🟡 Avec précaution</button>
-  <button data-f="red">🔴 Ne pas toucher</button>
-  <button data-f="stale">💤 Inutilisés &gt; 6 mois</button>
-  <input id="search" placeholder="Filtrer par nom…">
+  <button data-f="all" class="active" id="fl-all"></button>
+  <button data-f="green" id="fl-green"></button>
+  <button data-f="yellow" id="fl-yellow"></button>
+  <button data-f="red" id="fl-red"></button>
+  <button data-f="stale" id="fl-stale"></button>
+  <input id="search">
 </div>
 <table id="tbl">
   <thead><tr>
-    <th data-s="name">Dossier</th><th data-s="size">Taille</th><th></th>
-    <th data-s="app">Application</th><th>Type</th><th data-s="cat">Catégorie</th>
-    <th data-s="date">Dernière activité</th><th>Action recommandée</th>
+    <th data-s="name" id="th-name"></th><th data-s="size" id="th-size"></th><th></th>
+    <th data-s="app" id="th-app"></th><th id="th-type"></th><th data-s="cat" id="th-cat"></th>
+    <th data-s="date" id="th-date"></th><th id="th-action"></th>
   </tr></thead>
   <tbody></tbody>
 </table>
-<h2>💤 Dossiers AppData inutilisés depuis plus de 6 mois</h2>
+<h2 id="h-stale"></h2>
 <table id="staleTbl">
-  <thead><tr><th>Dossier</th><th>Application</th><th>Taille</th><th>Dernière activité</th></tr></thead>
+  <thead><tr><th id="th-sfolder"></th><th id="th-sapp"></th><th id="th-ssize"></th><th id="th-sdate"></th></tr></thead>
   <tbody></tbody>
 </table>
 <div id="sections"></div>
-<footer>Rapport généré en <b>lecture seule</b> : aucun fichier n'a été modifié ni supprimé.
-Les commandes affichées sont des suggestions à exécuter soi-même, dossier par dossier.</footer>
+<footer id="foot"></footer>
 
 <script>
 const DATA = ${data};
-const fmt = (b) => {
-  if (b >= 1024**3) return (b / 1024**3).toFixed(2) + ' Go';
-  if (b >= 1024**2) return (b / 1024**2).toFixed(1) + ' Mo';
-  return (b / 1024).toFixed(0) + ' Ko';
+
+// ===== i18n =====
+const I18N = {
+  fr: {
+    subtitle: (p, d) => p + ' — scanné le ' + d,
+    psadmin: '🛡 Ouvrir PowerShell en admin',
+    psadminFail: "Disponible uniquement quand le rapport est ouvert via le tableau de bord (lance l'outil puis ouvre le rapport depuis la liste).\\n\\nAlternative manuelle : clic droit sur PowerShell → « Exécuter en tant qu'administrateur ».",
+    cards: ['Taille totale (ajustée)', 'Gain 🟢 sans risque', 'Gain 🟡 supplémentaire', 'Dossiers analysés'],
+    mirrors: (list) => '⚠️ <b>Miroir(s) MSIX détecté(s)</b> — même contenu physique compté deux fois : ' + list + '. Le total ci-dessus est corrigé ; ne supprime ce contenu qu\\'une fois, via un seul des deux chemins.',
+    hActions: '🏆 Actions les plus rentables',
+    hFolders: '📦 Dossiers analysés',
+    filters: { all: 'Tous', green: '🟢 Sans risque', yellow: '🟡 Avec précaution', red: '🔴 Ne pas toucher', stale: '💤 Inutilisés > 6 mois' },
+    search: 'Filtrer par nom…',
+    th: { name: 'Dossier', size: 'Taille', app: 'Application', type: 'Type', cat: 'Catégorie', date: 'Dernière activité', action: 'Action recommandée' },
+    cat: { green: '🟢 Sans risque', yellow: '🟡 Précaution', red: '🔴 Ne pas toucher' },
+    stale6: '💤 > 6 mois', mirror: 'miroir MSIX',
+    hStale: '💤 Dossiers AppData inutilisés depuis plus de 6 mois',
+    thStale: { folder: 'Dossier', app: 'Application', size: 'Taille', date: 'Dernière activité' },
+    none: 'Aucune.', nothing: 'Rien de significatif détecté.',
+    hEvolution: (d) => '📈 Évolution depuis le scan du ' + d,
+    total: 'Total AppData : ', noChange: 'Aucune variation supérieure à 50 Mo.',
+    thEvo: { folder: 'Dossier', delta: 'Variation', kind: 'Type' },
+    kind: { grown: '📈 a grossi', shrunk: '📉 a diminué', new: '🆕 nouveau', removed: '🗑️ supprimé' },
+    copy: 'copier', copied: 'copié ✓',
+    footer: 'Rapport généré en <b>lecture seule</b> : aucun fichier n\\'a été modifié ni supprimé. Les commandes affichées sont des suggestions à exécuter soi-même, dossier par dossier.',
+    dateLocale: 'fr-FR',
+    fmt: (b) => b >= 1024**3 ? (b/1024**3).toFixed(2) + ' Go' : b >= 1024**2 ? (b/1024**2).toFixed(1) + ' Mo' : (b/1024).toFixed(0) + ' Ko',
+  },
+  en: {
+    subtitle: (p, d) => p + ' — scanned on ' + d,
+    psadmin: '🛡 Open admin PowerShell',
+    psadminFail: 'Only available when the report is opened through the dashboard (launch the tool, then open the report from the list).\\n\\nManual alternative: right-click PowerShell → "Run as administrator".',
+    cards: ['Total size (adjusted)', '🟢 No-risk gain', '🟡 Additional gain', 'Folders analyzed'],
+    mirrors: (list) => '⚠️ <b>MSIX mirror(s) detected</b> — same physical content counted twice: ' + list + '. The total above is corrected; delete this content only once, through a single path.',
+    hActions: '🏆 Most profitable actions',
+    hFolders: '📦 Analyzed folders',
+    filters: { all: 'All', green: '🟢 No risk', yellow: '🟡 With caution', red: '🔴 Do not touch', stale: '💤 Unused > 6 months' },
+    search: 'Filter by name…',
+    th: { name: 'Folder', size: 'Size', app: 'Application', type: 'Type', cat: 'Category', date: 'Last activity', action: 'Recommended action' },
+    cat: { green: '🟢 No risk', yellow: '🟡 Caution', red: '🔴 Do not touch' },
+    stale6: '💤 > 6 months', mirror: 'MSIX mirror',
+    hStale: '💤 AppData folders unused for more than 6 months',
+    thStale: { folder: 'Folder', app: 'Application', size: 'Size', date: 'Last activity' },
+    none: 'None.', nothing: 'Nothing significant detected.',
+    hEvolution: (d) => '📈 Change since the scan of ' + d,
+    total: 'AppData total: ', noChange: 'No change above 50 MB.',
+    thEvo: { folder: 'Folder', delta: 'Change', kind: 'Kind' },
+    kind: { grown: '📈 grew', shrunk: '📉 shrank', new: '🆕 new', removed: '🗑️ removed' },
+    copy: 'copy', copied: 'copied ✓',
+    footer: 'Report generated in <b>read-only</b> mode: no file was modified or deleted. The commands shown are suggestions to run yourself, folder by folder.',
+    dateLocale: 'en-US',
+    fmt: (b) => b >= 1024**3 ? (b/1024**3).toFixed(2) + ' GB' : b >= 1024**2 ? (b/1024**2).toFixed(1) + ' MB' : (b/1024).toFixed(0) + ' KB',
+  },
 };
-const CAT = { green: '🟢 Sans risque', yellow: '🟡 Précaution', red: '🔴 Ne pas toucher' };
+let lang = localStorage.getItem('aa-lang') || ((navigator.language || 'en').toLowerCase().startsWith('fr') ? 'fr' : 'en');
+let T = I18N[lang];
+const $id = (i) => document.getElementById(i);
+const fmt = (b) => T.fmt(b);
+const pick = (fr, en) => (lang === 'en' && en ? en : fr);
+const escH = (s) => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
 const maxSize = Math.max(...DATA.entries.map(e => e.sizeBytes), 1);
 
-document.getElementById('subtitle').textContent =
-  DATA.appDataPath + ' — scanné le ' + new Date(DATA.scanDate).toLocaleString('fr-FR');
-
-// Cartes de synthèse
-const cards = [
-  ['Taille totale (ajustée)', fmt(DATA.adjustedTotalBytes), ''],
-  ['Gain 🟢 sans risque', fmt(DATA.greenGainBytes), 'g'],
-  ['Gain 🟡 supplémentaire', fmt(DATA.yellowGainBytes), 'y'],
-  ['Dossiers analysés', String(DATA.entries.length), ''],
-];
-document.getElementById('cards').innerHTML = cards
-  .map(([l, v, c]) => '<div class="card ' + c + '"><div class="v">' + v + '</div><div class="l">' + l + '</div></div>')
-  .join('');
-
-// Miroirs MSIX
-if (DATA.mirrors.length) {
-  document.getElementById('mirrors').innerHTML = '<div class="warn">⚠️ <b>Miroir(s) MSIX détecté(s)</b> — même contenu physique compté deux fois : '
-    + DATA.mirrors.map(m => 'Roaming\\\\' + m.roamingName + ' ⇄ Packages\\\\' + m.packageName + ' (' + fmt(m.duplicatedBytes) + ')').join(' · ')
-    + '. Le total ci-dessus est corrigé ; ne supprime ce contenu qu\\'une fois, via un seul des deux chemins.</div>';
-}
-
-// Top actions
-// Échappe aussi les guillemets : les commandes en contiennent et sont insérées
-// dans des attributs HTML (data-cmd, title) délimités par des guillemets doubles
-const escH = (s) => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
-document.getElementById('topActions').innerHTML = DATA.topActions.slice(0, 5).map(t =>
-  '<li><b>' + escH(t.label) + '</b> — ' + fmt(t.sizeBytes) + ' <span class="chip ' + t.category + '">' + CAT[t.category] + '</span>'
-  + '<div class="note">' + escH(t.note) + '</div>'
-  + (t.command ? '<div class="cmd"><code title="' + escH(t.command) + '">' + escH(t.command) + '</code><button class="copy" data-cmd="' + escH(t.command) + '">copier</button></div>' : '')
-  + '</li>').join('');
-
-// Tableau principal
 let filter = 'all', search = '', sortKey = 'size', sortDir = -1;
 const tbody = document.querySelector('#tbl tbody');
 const expanded = new Set();
+
+function applyLang() {
+  T = I18N[lang];
+  document.documentElement.lang = lang;
+  $id('lg-fr').classList.toggle('active', lang === 'fr');
+  $id('lg-en').classList.toggle('active', lang === 'en');
+  $id('subtitle').textContent = T.subtitle(DATA.appDataPath, new Date(DATA.scanDate).toLocaleString(T.dateLocale));
+  $id('psadmin').textContent = T.psadmin;
+  $id('h-actions').textContent = T.hActions;
+  $id('h-folders').textContent = T.hFolders;
+  $id('fl-all').textContent = T.filters.all;
+  $id('fl-green').textContent = T.filters.green;
+  $id('fl-yellow').textContent = T.filters.yellow;
+  $id('fl-red').textContent = T.filters.red;
+  $id('fl-stale').textContent = T.filters.stale;
+  $id('search').placeholder = T.search;
+  $id('th-name').textContent = T.th.name; $id('th-size').textContent = T.th.size;
+  $id('th-app').textContent = T.th.app; $id('th-type').textContent = T.th.type;
+  $id('th-cat').textContent = T.th.cat; $id('th-date').textContent = T.th.date;
+  $id('th-action').textContent = T.th.action;
+  $id('h-stale').textContent = T.hStale;
+  $id('th-sfolder').textContent = T.thStale.folder; $id('th-sapp').textContent = T.thStale.app;
+  $id('th-ssize').textContent = T.thStale.size; $id('th-sdate').textContent = T.thStale.date;
+  $id('foot').innerHTML = T.footer;
+  renderCards(); renderMirrors(); renderEvolution(); renderTopActions(); renderStale(); renderSections(); render();
+}
+$id('lg-fr').addEventListener('click', () => { lang = 'fr'; try { localStorage.setItem('aa-lang', lang); } catch {} applyLang(); });
+$id('lg-en').addEventListener('click', () => { lang = 'en'; try { localStorage.setItem('aa-lang', lang); } catch {} applyLang(); });
+
+function renderCards() {
+  const cards = [
+    [T.cards[0], fmt(DATA.adjustedTotalBytes), ''],
+    [T.cards[1], fmt(DATA.greenGainBytes), 'g'],
+    [T.cards[2], fmt(DATA.yellowGainBytes), 'y'],
+    [T.cards[3], String(DATA.entries.length), ''],
+  ];
+  $id('cards').innerHTML = cards
+    .map(([l, v, c]) => '<div class="card ' + c + '"><div class="v">' + v + '</div><div class="l">' + l + '</div></div>')
+    .join('');
+}
+
+function renderMirrors() {
+  $id('mirrors').innerHTML = DATA.mirrors.length
+    ? '<div class="warn">' + T.mirrors(DATA.mirrors.map(m => 'Roaming\\\\' + m.roamingName + ' ⇄ Packages\\\\' + m.packageName + ' (' + fmt(m.duplicatedBytes) + ')').join(' · ')) + '</div>'
+    : '';
+}
+
+function renderEvolution() {
+  if (!DATA.evolution) { $id('evolution').innerHTML = ''; return; }
+  const ev = DATA.evolution;
+  const sign = (d) => (d >= 0 ? '+' : '−') + fmt(Math.abs(d));
+  $id('evolution').innerHTML =
+    '<h2>' + T.hEvolution(new Date(ev.previousDate).toLocaleString(T.dateLocale)) + '</h2>'
+    + '<div class="warn" style="border-color:var(--accent);background:var(--panel)">' + T.total + '<b>' + sign(ev.totalDeltaBytes) + '</b>'
+    + (ev.changes.length
+      ? '<table style="margin-top:10px"><thead><tr><th>' + T.thEvo.folder + '</th><th>' + T.thEvo.delta + '</th><th>' + T.thEvo.kind + '</th></tr></thead><tbody>'
+        + ev.changes.map(c => '<tr><td>' + escH(c.key) + '</td><td class="size">' + sign(c.deltaBytes) + '</td><td>' + T.kind[c.kind] + '</td></tr>').join('')
+        + '</tbody></table>'
+      : '<div class="note" style="margin-top:6px">' + T.noChange + '</div>')
+    + '</div>';
+}
+
+function cmdHtml(command) {
+  return command
+    ? '<div class="cmd"><code title="' + escH(command) + '">' + escH(command) + '</code><button class="copy" data-cmd="' + escH(command) + '">' + T.copy + '</button></div>'
+    : '';
+}
+
+function renderTopActions() {
+  $id('topActions').innerHTML = DATA.topActions.slice(0, 5).map(t =>
+    '<li><b>' + escH(t.label) + '</b> — ' + fmt(t.sizeBytes) + ' <span class="chip ' + t.category + '">' + T.cat[t.category] + '</span>'
+    + '<div class="note">' + escH(pick(t.note, t.noteEn)) + '</div>'
+    + cmdHtml(t.command)
+    + '</li>').join('');
+}
 
 function rowMatches(e) {
   if (filter === 'stale' && !e.isStale) return false;
@@ -365,61 +470,81 @@ function render() {
     const date = e.newestMtimeMs ? new Date(e.newestMtimeMs).toISOString().slice(0, 10) : '—';
     html += '<tr class="top" data-id="' + escH(id) + '"><td>' + (e.children.length ? (expanded.has(id) ? '▾ ' : '▸ ') : '&nbsp;&nbsp; ')
       + '<b>' + escH(e.root + '\\\\' + e.name) + '</b>'
-      + (e.isStale ? '<span class="badge">💤 &gt; 6 mois</span>' : '')
-      + (e.isMsixMirror ? '<span class="badge mirror">miroir MSIX</span>' : '') + '</td>'
+      + (e.isStale ? '<span class="badge">' + T.stale6 + '</span>' : '')
+      + (e.isMsixMirror ? '<span class="badge mirror">' + T.mirror + '</span>' : '') + '</td>'
       + '<td class="size">' + fmt(e.sizeBytes) + '</td>'
       + '<td style="width:90px"><div class="bar" style="width:' + Math.max(2, Math.round(88 * e.sizeBytes / maxSize)) + 'px"></div></td>'
-      + '<td>' + escH(c.app) + '</td><td>' + escH(c.dataType) + '</td>'
-      + '<td><span class="chip ' + c.category + '">' + CAT[c.category] + '</span></td>'
+      + '<td>' + escH(c.app) + '</td><td>' + escH(pick(c.dataType, c.dataTypeEn)) + '</td>'
+      + '<td><span class="chip ' + c.category + '">' + T.cat[c.category] + '</span></td>'
       + '<td class="size">' + date + '</td>'
-      + '<td><div class="note">' + escH(c.note) + '</div>'
-      + (c.command ? '<div class="cmd"><code title="' + escH(c.command) + '">' + escH(c.command) + '</code><button class="copy" data-cmd="' + escH(c.command) + '">copier</button></div>' : '')
-      + '</td></tr>';
+      + '<td><div class="note">' + escH(pick(c.note, c.noteEn)) + '</div>' + cmdHtml(c.command) + '</td></tr>';
     if (expanded.has(id)) {
       for (const ch of e.children) {
-        if (ch.sizeBytes < 1024 * 1024) continue; // enfants < 1 Mo : bruit
+        if (ch.sizeBytes < 1024 * 1024) continue; // children < 1 MB: noise
         const cc = ch.classification;
         const cdate = ch.newestMtimeMs ? new Date(ch.newestMtimeMs).toISOString().slice(0, 10) : '—';
         html += '<tr class="child"><td>' + escH(ch.name) + '</td>'
           + '<td class="size">' + fmt(ch.sizeBytes) + '</td><td></td>'
-          + '<td></td><td>' + escH(cc.dataType) + '</td>'
-          + '<td><span class="chip ' + cc.category + '">' + CAT[cc.category] + '</span></td>'
+          + '<td></td><td>' + escH(pick(cc.dataType, cc.dataTypeEn)) + '</td>'
+          + '<td><span class="chip ' + cc.category + '">' + T.cat[cc.category] + '</span></td>'
           + '<td class="size">' + cdate + '</td>'
-          + '<td><div class="note">' + escH(cc.note) + '</div>'
-          + (cc.command ? '<div class="cmd"><code title="' + escH(cc.command) + '">' + escH(cc.command) + '</code><button class="copy" data-cmd="' + escH(cc.command) + '">copier</button></div>' : '')
-          + '</td></tr>';
+          + '<td><div class="note">' + escH(pick(cc.note, cc.noteEn)) + '</div>' + cmdHtml(cc.command) + '</td></tr>';
       }
     }
   }
   tbody.innerHTML = html;
 }
 
-// PowerShell admin : ne fonctionne que si le rapport est servi par le tableau
-// de bord (même origine que l'API) — ouvert depuis le disque, on explique quoi faire.
-document.getElementById('psadmin').addEventListener('click', async () => {
+function renderStale() {
+  document.querySelector('#staleTbl tbody').innerHTML = DATA.staleApps.map(s =>
+    '<tr><td>' + escH(s.root + '\\\\' + s.name) + '</td><td>' + escH(s.app) + '</td>'
+    + '<td class="size">' + fmt(s.sizeBytes) + '</td><td class="size">' + s.newest + '</td></tr>').join('')
+    || '<tr><td colspan="4">' + T.none + '</td></tr>';
+}
+
+function renderSections() {
+  $id('sections').innerHTML = (DATA.sections || []).map(sec => {
+    const rows = sec.findings.map(f =>
+      '<tr><td><b>' + escH(f.label) + '</b></td>'
+      + '<td class="size">' + fmt(f.sizeBytes) + '</td>'
+      + '<td><span class="chip ' + f.category + '">' + T.cat[f.category] + '</span></td>'
+      + '<td class="size">' + (f.lastActivity || '—') + '</td>'
+      + '<td><div class="note">' + escH(pick(f.note, f.noteEn)) + '</div>' + cmdHtml(f.command) + '</td></tr>').join('');
+    const notes = lang === 'en' && sec.notesEn && sec.notesEn.length ? sec.notesEn : sec.notes;
+    return '<h2>' + escH(pick(sec.title, sec.titleEn)) + '</h2>'
+      + (notes.length ? '<div class="warn">' + notes.map(escH).join('<br>') + '</div>' : '')
+      + (rows
+        ? '<table><thead><tr><th>' + T.th.name + '</th><th>' + T.th.size + '</th><th>' + T.th.cat + '</th><th>' + T.th.date + '</th><th>' + T.th.action + '</th></tr></thead><tbody>' + rows + '</tbody></table>'
+        : '<div class="note">' + T.nothing + '</div>');
+  }).join('');
+}
+
+// Admin PowerShell: only works when the report is served by the dashboard
+// (same origin as the API) — opened from disk, we explain what to do.
+$id('psadmin').addEventListener('click', async () => {
   try {
     const r = await fetch('/api/open-powershell', { method: 'POST', headers: { 'x-appdata-analyzer': '1' } });
     if (!r.ok) throw new Error();
   } catch {
-    alert("Disponible uniquement quand le rapport est ouvert via le tableau de bord (lance l'outil puis ouvre le rapport depuis la liste).\\n\\nAlternative manuelle : clic droit sur PowerShell → « Exécuter en tant qu'administrateur ».");
+    alert(T.psadminFail);
   }
 });
 
-// Interactions : filtres, recherche, tri, expansion, copie
+// Interactions: filters, search, sort, expand, copy
 document.querySelectorAll('.toolbar button').forEach(b => b.addEventListener('click', () => {
   document.querySelectorAll('.toolbar button').forEach(x => x.classList.remove('active'));
   b.classList.add('active'); filter = b.dataset.f; render();
 }));
-document.getElementById('search').addEventListener('input', (ev) => { search = ev.target.value.toLowerCase(); render(); });
+$id('search').addEventListener('input', (ev) => { search = ev.target.value.toLowerCase(); render(); });
 document.querySelectorAll('#tbl th[data-s]').forEach(th => th.addEventListener('click', () => {
   if (sortKey === th.dataset.s) sortDir *= -1; else { sortKey = th.dataset.s; sortDir = -1; }
   render();
 }));
 document.body.addEventListener('click', (ev) => {
   const copy = ev.target.closest('.copy');
-  if (copy) {
+  if (copy && copy.dataset.cmd) {
     navigator.clipboard.writeText(copy.dataset.cmd).then(() => {
-      copy.textContent = 'copié ✓'; setTimeout(() => (copy.textContent = 'copier'), 1500);
+      copy.textContent = T.copied; setTimeout(() => (copy.textContent = T.copy), 1500);
     });
     ev.stopPropagation(); return;
   }
@@ -431,56 +556,17 @@ document.body.addEventListener('click', (ev) => {
   }
 });
 
-// Applis inutilisées
-document.querySelector('#staleTbl tbody').innerHTML = DATA.staleApps.map(s =>
-  '<tr><td>' + escH(s.root + '\\\\' + s.name) + '</td><td>' + escH(s.app) + '</td>'
-  + '<td class="size">' + fmt(s.sizeBytes) + '</td><td class="size">' + s.newest + '</td></tr>').join('')
-  || '<tr><td colspan="4">Aucune.</td></tr>';
-
-// Évolution depuis le scan précédent (module 5)
-if (DATA.evolution) {
-  const ev = DATA.evolution;
-  const sign = (d) => (d >= 0 ? '+' : '−') + fmt(Math.abs(d));
-  const KIND = { grown: '📈 a grossi', shrunk: '📉 a diminué', new: '🆕 nouveau', removed: '🗑️ supprimé' };
-  document.getElementById('evolution').innerHTML =
-    '<h2>📈 Évolution depuis le scan du ' + new Date(ev.previousDate).toLocaleString('fr-FR') + '</h2>'
-    + '<div class="warn" style="border-color:var(--accent);background:var(--panel)">Total AppData : <b>' + sign(ev.totalDeltaBytes) + '</b>'
-    + (ev.changes.length
-      ? '<table style="margin-top:10px"><thead><tr><th>Dossier</th><th>Variation</th><th>Type</th></tr></thead><tbody>'
-        + ev.changes.map(c => '<tr><td>' + escH(c.key) + '</td><td class="size">' + sign(c.deltaBytes) + '</td><td>' + KIND[c.kind] + '</td></tr>').join('')
-        + '</tbody></table>'
-      : '<div class="note" style="margin-top:6px">Aucune variation supérieure à 50 Mo.</div>')
-    + '</div>';
-}
-
-// Sections des modules complémentaires (caches dev, système, applications)
-document.getElementById('sections').innerHTML = (DATA.sections || []).map(sec => {
-  const rows = sec.findings.map(f =>
-    '<tr><td><b>' + escH(f.label) + '</b></td>'
-    + '<td class="size">' + fmt(f.sizeBytes) + '</td>'
-    + '<td><span class="chip ' + f.category + '">' + CAT[f.category] + '</span></td>'
-    + '<td class="size">' + (f.lastActivity || '—') + '</td>'
-    + '<td><div class="note">' + escH(f.note) + '</div>'
-    + (f.command ? '<div class="cmd"><code title="' + escH(f.command) + '">' + escH(f.command) + '</code><button class="copy" data-cmd="' + escH(f.command) + '">copier</button></div>' : '')
-    + '</td></tr>').join('');
-  return '<h2>' + escH(sec.title) + '</h2>'
-    + (sec.notes.length ? '<div class="warn">' + sec.notes.map(escH).join('<br>') + '</div>' : '')
-    + (rows
-      ? '<table><thead><tr><th>Élément</th><th>Taille</th><th>Catégorie</th><th>Dernière activité</th><th>Recommandation</th></tr></thead><tbody>' + rows + '</tbody></table>'
-      : '<div class="note">Rien de significatif détecté.</div>');
-}).join('');
-
-render();
+applyLang();
 </script>
 </body>
 </html>`;
 }
 
-/** Écrit report.html + report.json dans le dossier de sortie. */
+/** Writes report.html + report.json into the output folder. */
 export async function writeReport(a: Analysis, outDir: string): Promise<{ html: string; json: string }> {
   await mkdir(outDir, { recursive: true });
-  // Horodatage LOCAL à la seconde : plusieurs scans le même jour coexistent
-  // au lieu de s'écraser, et la liste des rapports reste triable par nom.
+  // LOCAL timestamp down to the second: multiple scans on the same day
+  // coexist instead of overwriting, and the report list stays name-sortable.
   const d = new Date(a.scanDate);
   const pad = (n: number): string => String(n).padStart(2, '0');
   const stamp = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}_${pad(d.getHours())}-${pad(d.getMinutes())}-${pad(d.getSeconds())}`;

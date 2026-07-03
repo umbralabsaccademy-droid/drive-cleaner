@@ -150,10 +150,13 @@ export async function scanInstalledApps(): Promise<Section> {
   const findings: Finding[] = [];
   const notes: string[] = [];
 
+  const notesEn: string[] = [];
   if (prefetch.size === 0) {
     notes.push('Prefetch illisible sans droits admin : la dernière utilisation repose uniquement sur UserAssist (lancements via l\'Explorateur) — relancer en admin pour affiner.');
+    notesEn.push('Prefetch unreadable without admin rights: last-used dates rely on UserAssist alone (Explorer launches) — rerun as admin for better accuracy.');
   }
   notes.push('La « dernière utilisation » est une estimation heuristique (UserAssist + Prefetch). Une date inconnue ne signifie pas que l\'application est inutilisée : vérifier avant de désinstaller.');
+  notesEn.push('"Last used" is a heuristic estimate (UserAssist + Prefetch). An unknown date does not mean the application is unused: verify before uninstalling.');
 
   for (const app of apps) {
     const sizeBytes = (app.EstimatedSize ?? 0) * 1024;
@@ -188,16 +191,27 @@ export async function scanInstalledApps(): Promise<Section> {
       sizeBytes,
       category: stale ? 'yellow' : unknown ? 'yellow' : 'red',
       dataType: installed ? `application (installée le ${installed})` : 'application',
+      dataTypeEn: installed ? `application (installed ${installed})` : 'application',
       note: stale
         ? `Aucun lancement détecté depuis le ${lastIso} : candidate à la désinstallation.`
         : unknown
           ? 'Dernière utilisation inconnue (jamais lancée via l\'Explorateur ?) : vérifier avant de désinstaller.'
           : `Utilisée récemment (${lastIso}) : à conserver.`,
+      noteEn: stale
+        ? `No launch detected since ${lastIso}: candidate for uninstallation.`
+        : unknown
+          ? 'Last use unknown (never launched via Explorer?): verify before uninstalling.'
+          : `Recently used (${lastIso}): keep it.`,
       command: stale || unknown ? `winget uninstall --name "${app.DisplayName}"` : undefined,
       lastActivity: lastIso,
     });
   }
 
   findings.sort((a, b) => b.sizeBytes - a.sizeBytes);
-  return { id: 'apps', title: '📱 Applications installées (candidates à la désinstallation)', findings, notes };
+  return {
+    id: 'apps',
+    title: '📱 Applications installées (candidates à la désinstallation)',
+    titleEn: '📱 Installed applications (uninstall candidates)',
+    findings, notes, notesEn,
+  };
 }

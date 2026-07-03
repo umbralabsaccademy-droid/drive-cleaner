@@ -16,8 +16,12 @@ export interface Finding {
   category: Category;
   /** cache | temporaires | application | images VM | … */
   dataType: string;
+  /** Traduction anglaise du type (fallback : dataType). */
+  dataTypeEn?: string;
   /** Conséquence exacte / recommandation, affichée dans le rapport. */
   note: string;
+  /** Traduction anglaise de la note (fallback : note). */
+  noteEn?: string;
   /** Commande suggérée (jamais exécutée par l'outil). */
   command?: string;
   /** Date ISO de dernière activité connue, ou null si inconnue. */
@@ -27,7 +31,11 @@ export interface Finding {
 export interface Section {
   id: string;
   title: string;
+  /** Titre anglais (fallback : title). */
+  titleEn?: string;
   findings: Finding[];
   /** Recommandations non mesurables (ex. « lancer cleanmgr »). */
   notes: string[];
+  /** Traductions anglaises des recommandations (même ordre que notes). */
+  notesEn?: string[];
 }

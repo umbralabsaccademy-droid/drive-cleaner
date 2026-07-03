@@ -1,7 +1,7 @@
 {
-  "name": "nettoyeur-espace-disque",
-  "version": "2.0.0",
-  "description": "Nettoyeur d'espace disque Windows, sûr et transparent : analyse en lecture seule, nettoyage via la Corbeille uniquement, 100 % local, zéro dépendance.",
+  "name": "drive-cleaner",
+  "version": "2.1.0",
+  "description": "Safe, transparent Windows disk space cleaner: read-only analysis, Recycle Bin cleanup only, 100% local, zero dependencies. Bilingual EN/FR.",
   "author": "Umbra Labs (https://www.academy.umbra-labs.dev/)",
   "license": "MIT",
   "homepage": "https://www.academy.umbra-labs.dev/",

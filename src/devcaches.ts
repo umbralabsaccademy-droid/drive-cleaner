@@ -135,14 +135,14 @@ async function findVhdx(rootPath: string, maxDepth: number): Promise<Array<{ pat
   return found;
 }
 
-/** Caches d'outils de dev dans le home : nom → métadonnées. */
-const HOME_CACHES: Array<{ rel: string; app: string; note: string }> = [
-  { rel: '.gradle\\caches', app: 'Gradle', note: 'Cache de build Android/Java. Retéléchargé au prochain build.' },
-  { rel: '.m2\\repository', app: 'Maven', note: 'Dépôt local Maven. Retéléchargé au prochain build.' },
-  { rel: '.nuget\\packages', app: 'NuGet', note: 'Cache global .NET. Retéléchargé au prochain restore.' },
-  { rel: '.expo', app: 'Expo', note: 'Caches Expo (builds, devices). Recréé automatiquement.' },
-  { rel: '.cargo\\registry', app: 'Rust (cargo)', note: 'Registre de crates. Retéléchargé au prochain build.' },
-  { rel: '.ollama\\models', app: 'Ollama', note: 'Modèles IA locaux. Retéléchargeables (volumineux) via « ollama pull ».' },
+/** Caches d'outils de dev dans le home : nom → métadonnées (FR + EN). */
+const HOME_CACHES: Array<{ rel: string; app: string; note: string; noteEn: string }> = [
+  { rel: '.gradle\\caches', app: 'Gradle', note: 'Cache de build Android/Java. Retéléchargé au prochain build.', noteEn: 'Android/Java build cache. Re-downloaded on the next build.' },
+  { rel: '.m2\\repository', app: 'Maven', note: 'Dépôt local Maven. Retéléchargé au prochain build.', noteEn: 'Local Maven repository. Re-downloaded on the next build.' },
+  { rel: '.nuget\\packages', app: 'NuGet', note: 'Cache global .NET. Retéléchargé au prochain restore.', noteEn: 'Global .NET cache. Re-downloaded on the next restore.' },
+  { rel: '.expo', app: 'Expo', note: 'Caches Expo (builds, devices). Recréé automatiquement.', noteEn: 'Expo caches (builds, devices). Recreated automatically.' },
+  { rel: '.cargo\\registry', app: 'Rust (cargo)', note: 'Registre de crates. Retéléchargé au prochain build.', noteEn: 'Crate registry. Re-downloaded on the next build.' },
+  { rel: '.ollama\\models', app: 'Ollama', note: 'Modèles IA locaux. Retéléchargeables (volumineux) via « ollama pull ».', noteEn: 'Local AI models. Re-downloadable (large) via "ollama pull".' },
 ];
 
 /**
@@ -153,6 +153,7 @@ const HOME_CACHES: Array<{ rel: string; app: string; note: string }> = [
 export async function scanDevCaches(homeDir: string, workspacesPath: string): Promise<Section> {
   const findings: Finding[] = [];
   const notes: string[] = [];
+  const notesEn: string[] = [];
   const now = Date.now();
   const iso = (ms: number): string | null => (ms > 0 ? new Date(ms).toISOString().slice(0, 10) : null);
 
@@ -172,9 +173,13 @@ export async function scanDevCaches(homeDir: string, workspacesPath: string): Pr
         sizeBytes: st.sizeBytes,
         category: staleProject ? 'green' : 'yellow',
         dataType: 'dépendances npm',
+        dataTypeEn: 'npm dependencies',
         note: staleProject
           ? `Projet inactif depuis ${iso(codeNewest)} : node_modules regénérable par « npm install » si le projet reprend.`
           : 'Projet actif : supprimable mais « npm install » sera nécessaire au prochain travail dessus.',
+        noteEn: staleProject
+          ? `Project inactive since ${iso(codeNewest)}: node_modules can be regenerated with "npm install" if the project resumes.`
+          : 'Active project: removable, but "npm install" will be needed next time you work on it.',
         command: rmCmd(nm),
         lastActivity: iso(codeNewest),
       });
@@ -190,13 +195,16 @@ export async function scanDevCaches(homeDir: string, workspacesPath: string): Pr
         sizeBytes: st.sizeBytes,
         category: 'yellow',
         dataType: 'historique Git',
+        dataTypeEn: 'Git history',
         note: 'Dépôt volumineux : « git gc » compacte l\'historique sans perte. Ne jamais supprimer le dossier .git lui-même.',
+        noteEn: 'Large repository: "git gc" compacts history losslessly. Never delete the .git folder itself.',
         command: `git -C "${repo}" gc --aggressive --prune=now`,
         lastActivity: iso(st.newestMtimeMs),
       });
     }
   } else {
     notes.push(`Dossier workspaces introuvable : ${workspacesPath} (option --workspaces pour le changer).`);
+    notesEn.push(`Workspaces folder not found: ${workspacesPath} (use --workspaces to change it).`);
   }
 
   // --- caches d'outils dans le home ---
@@ -211,7 +219,9 @@ export async function scanDevCaches(homeDir: string, workspacesPath: string): Pr
       sizeBytes: st.sizeBytes,
       category: 'green',
       dataType: 'cache d\'outil',
+      dataTypeEn: 'tool cache',
       note: c.note,
+      noteEn: c.noteEn,
       command: rmCmd(p),
       lastActivity: iso(st.newestMtimeMs),
     });
@@ -230,7 +240,9 @@ export async function scanDevCaches(homeDir: string, workspacesPath: string): Pr
       sizeBytes: st.sizeBytes,
       category: 'yellow',
       dataType: 'image d\'émulateur Android',
+      dataTypeEn: 'Android emulator image',
       note: 'Supprimer via le Device Manager d\'Android Studio (pas à la main : un fichier .ini l\'accompagne). L\'émulateur devra être recréé.',
+      noteEn: 'Delete through Android Studio\'s Device Manager (not by hand: a companion .ini file exists). The emulator will need to be recreated.',
       lastActivity: iso(st.newestMtimeMs),
     });
   }
@@ -252,7 +264,9 @@ export async function scanDevCaches(homeDir: string, workspacesPath: string): Pr
         sizeBytes: v.sizeBytes,
         category: 'red',
         dataType: 'disque virtuel WSL/Docker',
+        dataTypeEn: 'WSL/Docker virtual disk',
         note: 'Contient les données de la distro/des conteneurs — ne pas supprimer. Un .vhdx ne rétrécit jamais seul : nettoyer dedans (« docker system prune -a ») puis compacter avec « wsl --shutdown » et Optimize-VHD (ou diskpart).',
+        noteEn: 'Holds distro/container data — do not delete. A .vhdx never shrinks by itself: clean inside first ("docker system prune -a"), then compact with "wsl --shutdown" and Optimize-VHD (or diskpart).',
         command: `wsl --shutdown; Optimize-VHD -Path "${v.path}" -Mode Full  # nécessite Hyper-V ; sinon diskpart /compact`,
         lastActivity: iso(v.mtimeMs),
       });
@@ -260,5 +274,10 @@ export async function scanDevCaches(homeDir: string, workspacesPath: string): Pr
   }
 
   findings.sort((a, b) => b.sizeBytes - a.sizeBytes);
-  return { id: 'dev', title: '🧰 Caches développeur (hors AppData)', findings, notes };
+  return {
+    id: 'dev',
+    title: '🧰 Caches développeur (hors AppData)',
+    titleEn: '🧰 Developer caches (outside AppData)',
+    findings, notes, notesEn,
+  };
 }

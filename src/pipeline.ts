@@ -58,16 +58,16 @@ export const fmt = (b: number): string =>
 export async function runFullScan(opts: PipelineOptions, emit: (ev: ProgressEvent) => void): Promise<ScanSummary> {
   const started = Date.now();
 
-  emit({ type: 'phase', text: `Scan AppData : ${opts.appDataPath} (lecture seule)` });
+  emit({ type: 'phase', text: `Scanning AppData: ${opts.appDataPath} (read-only)` });
   const entries = await scanAppData(opts.appDataPath, {
     concurrency: opts.concurrency,
     onProgress: (e) => emit({ type: 'item', text: `${e.root}\\${e.name} : ${fmt(e.sizeBytes)}` }),
   });
 
-  emit({ type: 'phase', text: 'Détection des miroirs MSIX…' });
+  emit({ type: 'phase', text: 'Detecting MSIX mirrors…' });
   const mirrors = await findMsixMirrors(opts.appDataPath, entries);
   for (const m of mirrors) {
-    emit({ type: 'warn', text: `Miroir : Roaming\\${m.roamingName} ⇄ Packages\\${m.packageName} (${fmt(m.duplicatedBytes)} compté en double)` });
+    emit({ type: 'warn', text: `Mirror: Roaming\\${m.roamingName} ⇄ Packages\\${m.packageName} (${fmt(m.duplicatedBytes)} double-counted)` });
   }
   const adjustedTotal = entries.reduce((s, e) => s + e.sizeBytes, 0) - mirrors.reduce((s, m) => s + m.duplicatedBytes, 0);
 
@@ -79,15 +79,15 @@ export async function runFullScan(opts: PipelineOptions, emit: (ev: ProgressEven
       const section = await fn();
       sections.push(section);
       const total = section.findings.reduce((s, f) => s + f.sizeBytes, 0);
-      emit({ type: 'item', text: `${section.findings.length} élément(s), ${fmt(total)}` });
+      emit({ type: 'item', text: `${section.findings.length} item(s), ${fmt(total)}` });
     } catch (err) {
-      emit({ type: 'warn', text: `Module « ${name} » en échec (ignoré) : ${err instanceof Error ? err.message : String(err)}` });
+      emit({ type: 'warn', text: `Module "${name}" failed (skipped): ${err instanceof Error ? err.message : String(err)}` });
     }
   };
 
-  await runModule('dev', 'Caches développeur (workspaces, home, AVD, vhdx)', () => scanDevCaches(os.homedir(), opts.workspacesPath));
-  await runModule('system', 'Zones système (Temp, Windows Update, corbeille…)', () => scanSystem());
-  await runModule('apps', 'Applications installées (registre + UserAssist + Prefetch)', () => scanInstalledApps());
+  await runModule('dev', 'Developer caches (workspaces, home, AVD, vhdx)', () => scanDevCaches(os.homedir(), opts.workspacesPath));
+  await runModule('system', 'System areas (Temp, Windows Update, recycle bin…)', () => scanSystem());
+  await runModule('apps', 'Installed applications (registry + UserAssist + Prefetch)', () => scanInstalledApps());
 
   let evolution: Evolution | null = null;
   if (!opts.skip.has('history')) {
@@ -95,12 +95,12 @@ export async function runFullScan(opts: PipelineOptions, emit: (ev: ProgressEven
     evolution = computeEvolution(entries, adjustedTotal, previous);
     if (evolution) {
       const d = evolution.totalDeltaBytes;
-      emit({ type: 'item', text: `Évolution depuis ${evolution.previousDate.slice(0, 16).replace('T', ' ')} : ${d >= 0 ? '+' : '−'}${fmt(Math.abs(d))}` });
+      emit({ type: 'item', text: `Change since ${evolution.previousDate.slice(0, 16).replace('T', ' ')}: ${d >= 0 ? '+' : '−'}${fmt(Math.abs(d))}` });
     }
     await appendSnapshot(opts.outDir, entries, adjustedTotal);
   }
 
-  emit({ type: 'phase', text: 'Génération du rapport…' });
+  emit({ type: 'phase', text: 'Generating report…' });
   const analysis = analyze(entries, mirrors, opts.appDataPath, sections, evolution);
   const { html, json } = await writeReport(analysis, opts.outDir);
 

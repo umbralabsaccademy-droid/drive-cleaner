@@ -61,7 +61,7 @@ async function exists(p: string): Promise<boolean> {
 /** Envoie une cible à la corbeille. */
 async function recycleOne(t: CleanTarget): Promise<CleanResult> {
   if (!(await exists(t.path))) {
-    return { id: t.id, path: t.path, label: t.label, ok: true, freedBytes: 0, error: 'déjà absent' };
+    return { id: t.id, path: t.path, label: t.label, ok: true, freedBytes: 0, error: 'already absent' };
   }
 
   // Timeout proportionnel à la taille (l'envoi corbeille de gros dossiers est lent)
@@ -99,7 +99,7 @@ Get-ChildItem -LiteralPath ${psQuote(t.path)} -Force | ForEach-Object {
     label: t.label,
     ok: success,
     freedBytes: success ? t.sizeBytes : 0,
-    error: success ? undefined : err || 'le dossier existe encore (fichiers verrouillés ?)',
+    error: success ? undefined : err || 'folder still exists (locked files?)',
   };
 }
 
