@@ -12,6 +12,7 @@ import { analyze, writeReport } from './report.ts';
 import { scanDevCaches } from './devcaches.ts';
 import { scanSystem, isElevated } from './system.ts';
 import { scanInstalledApps } from './apps.ts';
+import { scanPrivacy } from './privacy.ts';
 import { buildActionables, type Actionable } from './actionables.ts';
 import { loadPreviousSnapshot, appendSnapshot, computeEvolution, type Evolution } from './history.ts';
 import type { Section } from './types.ts';
@@ -88,6 +89,7 @@ export async function runFullScan(opts: PipelineOptions, emit: (ev: ProgressEven
   await runModule('dev', 'Developer caches (workspaces, home, AVD, vhdx)', () => scanDevCaches(os.homedir(), opts.workspacesPath));
   await runModule('system', 'System areas (Temp, Windows Update, recycle bin…)', () => scanSystem());
   await runModule('apps', 'Installed applications (registry + UserAssist + Prefetch)', () => scanInstalledApps());
+  await runModule('privacy', 'Privacy & activity traces (Prefetch, Recent, browsers…)', () => scanPrivacy());
 
   let evolution: Evolution | null = null;
   if (!opts.skip.has('history')) {

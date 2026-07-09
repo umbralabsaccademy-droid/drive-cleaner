@@ -7,7 +7,7 @@
  *   node src/cli.ts --serve [--port N]   → tableau de bord web local
  *
  * Options : [--path <AppData>] [--out <dossier>] [--workspaces <dossier>]
- *           [--skip dev,system,apps,history] [--concurrency 32] [--open] [--auto-exit]
+ *           [--skip dev,system,apps,privacy,history] [--concurrency 32] [--open] [--auto-exit]
  *
  * Garantie : analyse STRICTEMENT EN LECTURE SEULE ; le nettoyage assisté
  * (déclenché par l'utilisateur dans l'interface) envoie à la Corbeille,
@@ -63,7 +63,7 @@ function parseArgs(argv: string[]): CliArgs {
       case '--help':
       case '-h':
         console.log('Usage : ghosttrace [--serve] [--port 7113] [--path <AppData>] [--out <dossier>]');
-        console.log('                         [--workspaces <dossier>] [--skip dev,system,apps,history]');
+        console.log('                         [--workspaces <dossier>] [--skip dev,system,apps,privacy,history]');
         console.log('                         [--concurrency N] [--open] [--auto-exit]');
         process.exit(0);
     }

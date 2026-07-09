@@ -540,6 +540,7 @@ function dashboardHtml(opts: ServerOptions): string {
       <label class="muted"><input type="checkbox" id="mod-dev" checked> <span id="l-mod-dev"></span></label>
       <label class="muted"><input type="checkbox" id="mod-system" checked> <span id="l-mod-system"></span></label>
       <label class="muted"><input type="checkbox" id="mod-apps" checked> <span id="l-mod-apps"></span></label>
+      <label class="muted"><input type="checkbox" id="mod-privacy" checked> <span id="l-mod-privacy"></span></label>
       <button class="sec" id="e-psadmin"></button>
       <button class="sec" id="e-adminrelaunch"></button>
       <span id="e-status" class="muted"></span>
@@ -608,11 +609,11 @@ const I18N = {
     scanError: (e) => 'L\\'analyse a rencontré un problème : ' + e + '\\n\\nVous pouvez réessayer. Si cela persiste, utilisez « Exporter un diagnostic » en bas de page.',
     cleaning: 'Nettoyage en cours…',
     cleaningN: (d, t) => 'Nettoyage… (' + d + '/' + t + ')',
-    phases: { appdata: 'Recherche des fichiers temporaires…', msix: 'Vérifications de sécurité…', system: 'Analyse des fichiers Windows…', application: 'Analyse des programmes installés…', report: 'Préparation des résultats…', developer: 'Analyse des dossiers de travail…', default: 'Analyse en cours…' },
+    phases: { appdata: 'Recherche des fichiers temporaires…', msix: 'Vérifications de sécurité…', system: 'Analyse des fichiers Windows…', application: 'Analyse des programmes installés…', report: 'Préparation des résultats…', developer: 'Analyse des dossiers de travail…', privacy: 'Analyse des traces d\\'activité…', default: 'Analyse en cours…' },
     eTitle: '👻 GhostTrace <span class="chip yellow">expert</span>',
     eSubtitle: (p, w) => 'Cible : ' + p + ' · Workspaces : ' + w + ' · analyse en lecture seule, nettoyage via Corbeille uniquement.',
     eScan: '▶ Lancer le scan',
-    modDev: 'Caches dev', modSystem: 'Système', modApps: 'Applications',
+    modDev: 'Caches dev', modSystem: 'Système', modApps: 'Applications', modPrivacy: 'Traces d\\'activité',
     psAdmin: '🛡 PowerShell admin', adminRelaunch: '⬆ Relancer en admin',
     ready: 'Prêt.', scanning: 'Scan en cours…', done: 'Terminé ✓', errorPrefix: 'Erreur : ',
     eActionsTitle: '🧹 Nettoyage assisté (Corbeille)',
@@ -669,11 +670,11 @@ const I18N = {
     scanError: (e) => 'The analysis ran into a problem: ' + e + '\\n\\nYou can try again. If it persists, use "Export a diagnostic" at the bottom of the page.',
     cleaning: 'Cleaning…',
     cleaningN: (d, t) => 'Cleaning… (' + d + '/' + t + ')',
-    phases: { appdata: 'Looking for temporary files…', msix: 'Safety checks…', system: 'Analyzing Windows files…', application: 'Analyzing installed programs…', report: 'Preparing the results…', developer: 'Analyzing work folders…', default: 'Analyzing…' },
+    phases: { appdata: 'Looking for temporary files…', msix: 'Safety checks…', system: 'Analyzing Windows files…', application: 'Analyzing installed programs…', report: 'Preparing the results…', developer: 'Analyzing work folders…', privacy: 'Analyzing activity traces…', default: 'Analyzing…' },
     eTitle: '👻 GhostTrace <span class="chip yellow">expert</span>',
     eSubtitle: (p, w) => 'Target: ' + p + ' · Workspaces: ' + w + ' · read-only analysis, cleanup via Recycle Bin only.',
     eScan: '▶ Run scan',
-    modDev: 'Dev caches', modSystem: 'System', modApps: 'Applications',
+    modDev: 'Dev caches', modSystem: 'System', modApps: 'Applications', modPrivacy: 'Activity traces',
     psAdmin: '🛡 Admin PowerShell', adminRelaunch: '⬆ Relaunch as admin',
     ready: 'Ready.', scanning: 'Scanning…', done: 'Done ✓', errorPrefix: 'Error: ',
     eActionsTitle: '🧹 Assisted cleanup (Recycle Bin)',
@@ -744,6 +745,7 @@ function applyLang() {
   $('l-mod-dev').textContent = T.modDev;
   $('l-mod-system').textContent = T.modSystem;
   $('l-mod-apps').textContent = T.modApps;
+  $('l-mod-privacy').textContent = T.modPrivacy;
   $('e-psadmin').textContent = T.psAdmin;
   $('e-adminrelaunch').textContent = T.adminRelaunch;
   $('e-actions-title').textContent = T.eActionsTitle;
@@ -843,6 +845,7 @@ function simplifyPhase(t) {
   if (s.includes('appdata')) return P.appdata;
   if (s.includes('msix')) return P.msix;
   if (s.includes('system') || s.includes('système') || s.includes('systeme')) return P.system;
+  if (s.includes('privacy') || s.includes('traces')) return P.privacy;
   if (s.includes('application')) return P.application;
   if (s.includes('report') || s.includes('rapport')) return P.report;
   if (s.includes('developer') || s.includes('développeur')) return P.developer;
@@ -966,6 +969,7 @@ $('e-scan').addEventListener('click', () => {
   if (!$('mod-dev').checked) skip.push('dev');
   if (!$('mod-system').checked) skip.push('system');
   if (!$('mod-apps').checked) skip.push('apps');
+  if (!$('mod-privacy').checked) skip.push('privacy');
   api('/api/scan', { skip });
 });
 function renderExpertActions() {
