@@ -43,6 +43,10 @@ export interface TopAction {
   note: string;
   noteEn?: string;
   command?: string;
+  /** Vie privée vs espace disque : distinction visuelle, orthogonale au risque. */
+  domain: 'privacy' | 'disk';
+  purpose?: string;
+  purposeEn?: string;
 }
 
 export interface Analysis {
@@ -111,6 +115,7 @@ export function analyze(
       actions.push({
         label: `${e.root}\\${e.name}`, path: e.path, sizeBytes: e.sizeBytes,
         category: 'green', note: e.classification.note, noteEn: e.classification.noteEn, command: e.classification.command,
+        domain: 'disk',
       });
     } else {
       for (const c of e.children) {
@@ -120,6 +125,7 @@ export function analyze(
             actions.push({
               label: `${e.root}\\${e.name}\\${c.name}`, path: c.path, sizeBytes: c.sizeBytes,
               category: 'green', note: c.classification.note, noteEn: c.classification.noteEn, command: c.classification.command,
+              domain: 'disk',
             });
           }
         } else if (c.classification.category === 'yellow' && c.classification.command) {
@@ -128,6 +134,7 @@ export function analyze(
           actions.push({
             label: `${e.root}\\${e.name}\\${c.name}`, path: c.path, sizeBytes: c.sizeBytes,
             category: 'yellow', note: c.classification.note, noteEn: c.classification.noteEn, command: c.classification.command,
+            domain: 'disk',
           });
         }
       }
@@ -142,6 +149,7 @@ export function analyze(
           actions.push({
             label: `${e.root}\\${e.name}`, path: e.path, sizeBytes: remaining,
             category: 'yellow', note: e.classification.note, noteEn: e.classification.noteEn, command: e.classification.command,
+            domain: 'disk',
           });
         }
       }
@@ -152,13 +160,20 @@ export function analyze(
   // Exception: applications (uninstalling is a heavy decision) stay out of
   // the numbered gains so the summary is not artificially inflated.
   for (const s of sections) {
+    const isPrivacy = s.id === 'privacy';
     for (const f of s.findings) {
       if (s.id !== 'apps') {
         if (f.category === 'green') greenGain += f.sizeBytes;
         else if (f.category === 'yellow' && f.command) yellowGain += f.sizeBytes;
       }
-      if (f.command && f.category !== 'red' && f.sizeBytes > 50 * 1024 * 1024) {
-        actions.push({ label: f.label, path: f.path, sizeBytes: f.sizeBytes, category: f.category, note: f.note, noteEn: f.noteEn, command: f.command });
+      // Traces de confidentialité : seuil bas (l'enjeu n'est pas l'espace disque),
+      // sinon 50 Mo comme pour les autres modules complémentaires.
+      const worthShowing = isPrivacy ? f.sizeBytes > 10 * 1024 : f.sizeBytes > 50 * 1024 * 1024;
+      if (f.command && f.category !== 'red' && worthShowing) {
+        actions.push({
+          label: f.label, path: f.path, sizeBytes: f.sizeBytes, category: f.category, note: f.note, noteEn: f.noteEn, command: f.command,
+          domain: isPrivacy ? 'privacy' : 'disk', purpose: f.purpose, purposeEn: f.purposeEn,
+        });
       }
     }
   }
@@ -215,19 +230,26 @@ export function renderHtml(a: Analysis): string {
   :root {
     --bg: #12141a; --panel: #1c1f28; --panel2: #232734; --text: #e6e8ee; --muted: #9aa0b0;
     --green: #3fb950; --yellow: #d29922; --red: #f85149; --accent: #58a6ff; --border: #30363d;
+    --privacy: #d2a8ff;
   }
   * { box-sizing: border-box; }
   body { margin: 0; padding: 24px; background: var(--bg); color: var(--text);
          font: 14px/1.5 "Segoe UI", system-ui, sans-serif; }
   h1 { font-size: 22px; margin: 0 0 4px; }
   h2 { font-size: 16px; margin: 28px 0 10px; color: var(--accent); }
+  h2.privacy { color: var(--privacy); }
   .sub { color: var(--muted); margin-bottom: 20px; }
   .cards { display: flex; gap: 12px; flex-wrap: wrap; }
   .card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
           padding: 14px 18px; min-width: 170px; }
   .card .v { font-size: 22px; font-weight: 600; }
   .card .l { color: var(--muted); font-size: 12px; }
-  .card.g .v { color: var(--green); } .card.y .v { color: var(--yellow); }
+  .card.g .v { color: var(--green); } .card.y .v { color: var(--yellow); } .card.p .v { color: var(--privacy); }
+  .domain { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; margin-left: 6px; }
+  .domain.privacy { background: #2d1f3d; color: var(--privacy); }
+  .domain.disk { background: #17293f; color: var(--accent); }
+  .purpose { color: var(--text); font-size: 12.5px; max-width: 460px; margin-bottom: 3px; }
+  .purpose b { color: var(--privacy); font-weight: 600; }
   .toolbar { display: flex; gap: 8px; margin: 14px 0; flex-wrap: wrap; align-items: center; }
   .toolbar button { background: var(--panel2); color: var(--text); border: 1px solid var(--border);
                     border-radius: 6px; padding: 6px 12px; cursor: pointer; }
@@ -315,7 +337,9 @@ const I18N = {
     subtitle: (p, d) => p + ' — scanné le ' + d,
     psadmin: '🛡 Ouvrir PowerShell en admin',
     psadminFail: "Disponible uniquement quand le rapport est ouvert via le tableau de bord (lance l'outil puis ouvre le rapport depuis la liste).\\n\\nAlternative manuelle : clic droit sur PowerShell → « Exécuter en tant qu'administrateur ».",
-    cards: ['Taille totale (ajustée)', 'Gain 🟢 sans risque', 'Gain 🟡 supplémentaire', 'Dossiers analysés'],
+    cards: ['Taille totale (ajustée)', 'Gain 🟢 sans risque', 'Gain 🟡 supplémentaire', 'Dossiers analysés', '🕵️ Traces de confidentialité'],
+    domain: { privacy: '🕵️ Vie privée', disk: '💾 Espace disque' },
+    purpose: 'À quoi ça sert :',
     mirrors: (list) => '⚠️ <b>Miroir(s) MSIX détecté(s)</b> — même contenu physique compté deux fois : ' + list + '. Le total ci-dessus est corrigé ; ne supprime ce contenu qu\\'une fois, via un seul des deux chemins.',
     hActions: '🏆 Actions les plus rentables',
     hFolders: '📦 Dossiers analysés',
@@ -340,7 +364,9 @@ const I18N = {
     subtitle: (p, d) => p + ' — scanned on ' + d,
     psadmin: '🛡 Open admin PowerShell',
     psadminFail: 'Only available when the report is opened through the dashboard (launch the tool, then open the report from the list).\\n\\nManual alternative: right-click PowerShell → "Run as administrator".',
-    cards: ['Total size (adjusted)', '🟢 No-risk gain', '🟡 Additional gain', 'Folders analyzed'],
+    cards: ['Total size (adjusted)', '🟢 No-risk gain', '🟡 Additional gain', 'Folders analyzed', '🕵️ Privacy traces'],
+    domain: { privacy: '🕵️ Privacy', disk: '💾 Disk space' },
+    purpose: 'What it\\'s for:',
     mirrors: (list) => '⚠️ <b>MSIX mirror(s) detected</b> — same physical content counted twice: ' + list + '. The total above is corrected; delete this content only once, through a single path.',
     hActions: '🏆 Most profitable actions',
     hFolders: '📦 Analyzed folders',
@@ -404,11 +430,14 @@ $id('lg-fr').addEventListener('click', () => { lang = 'fr'; try { localStorage.s
 $id('lg-en').addEventListener('click', () => { lang = 'en'; try { localStorage.setItem('aa-lang', lang); } catch {} applyLang(); });
 
 function renderCards() {
+  const privacySec = (DATA.sections || []).find(s => s.id === 'privacy');
+  const privacyCount = privacySec ? privacySec.findings.length : 0;
   const cards = [
     [T.cards[0], fmt(DATA.adjustedTotalBytes), ''],
     [T.cards[1], fmt(DATA.greenGainBytes), 'g'],
     [T.cards[2], fmt(DATA.yellowGainBytes), 'y'],
     [T.cards[3], String(DATA.entries.length), ''],
+    [T.cards[4], String(privacyCount), 'p'],
   ];
   $id('cards').innerHTML = cards
     .map(([l, v, c]) => '<div class="card ' + c + '"><div class="v">' + v + '</div><div class="l">' + l + '</div></div>')
@@ -445,6 +474,8 @@ function cmdHtml(command) {
 function renderTopActions() {
   $id('topActions').innerHTML = DATA.topActions.slice(0, 5).map(t =>
     '<li><b>' + escH(t.label) + '</b> — ' + fmt(t.sizeBytes) + ' <span class="chip ' + t.category + '">' + T.cat[t.category] + '</span>'
+    + ' <span class="domain ' + t.domain + '">' + T.domain[t.domain] + '</span>'
+    + (t.purpose ? '<div class="purpose"><b>' + T.purpose + '</b> ' + escH(pick(t.purpose, t.purposeEn)) + '</div>' : '')
     + '<div class="note">' + escH(pick(t.note, t.noteEn)) + '</div>'
     + cmdHtml(t.command)
     + '</li>').join('');
@@ -507,14 +538,16 @@ function renderStale() {
 
 function renderSections() {
   $id('sections').innerHTML = (DATA.sections || []).map(sec => {
+    const isPrivacy = sec.id === 'privacy';
     const rows = sec.findings.map(f =>
       '<tr><td><b>' + escH(f.label) + '</b></td>'
       + '<td class="size">' + fmt(f.sizeBytes) + '</td>'
       + '<td><span class="chip ' + f.category + '">' + T.cat[f.category] + '</span></td>'
       + '<td class="size">' + (f.lastActivity || '—') + '</td>'
-      + '<td><div class="note">' + escH(pick(f.note, f.noteEn)) + '</div>' + cmdHtml(f.command) + '</td></tr>').join('');
+      + '<td>' + (isPrivacy && f.purpose ? '<div class="purpose"><b>' + T.purpose + '</b> ' + escH(pick(f.purpose, f.purposeEn)) + '</div>' : '')
+      + '<div class="note">' + escH(pick(f.note, f.noteEn)) + '</div>' + cmdHtml(f.command) + '</td></tr>').join('');
     const notes = lang === 'en' && sec.notesEn && sec.notesEn.length ? sec.notesEn : sec.notes;
-    return '<h2>' + escH(pick(sec.title, sec.titleEn)) + '</h2>'
+    return '<h2 class="' + (isPrivacy ? 'privacy' : '') + '">' + escH(pick(sec.title, sec.titleEn)) + '</h2>'
       + (notes.length ? '<div class="warn">' + notes.map(escH).join('<br>') + '</div>' : '')
       + (rows
         ? '<table><thead><tr><th>' + T.th.name + '</th><th>' + T.th.size + '</th><th>' + T.th.cat + '</th><th>' + T.th.date + '</th><th>' + T.th.action + '</th></tr></thead><tbody>' + rows + '</tbody></table>'

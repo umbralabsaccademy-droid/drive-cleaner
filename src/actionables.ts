@@ -40,6 +40,11 @@ export interface Actionable {
   simple: boolean;
   /** Nécessite une élévation admin (zones système). */
   needsAdmin: boolean;
+  /** Issu du module traces d'activité/confidentialité (regroupement UI). */
+  privacy: boolean;
+  /** À quoi sert ce fichier (pédagogie, distinct de friendlyNote/note qui portent la conséquence). */
+  purpose?: string;
+  purposeEn?: string;
   command?: string;
 }
 
@@ -110,6 +115,100 @@ function friendly(app: string, dataType: string, autoRecreated: boolean): { labe
 }
 
 /**
+ * Libellés grand public pour les traces d'activité/confidentialité :
+ * contrairement à `friendly()`, on assume ici le compromis réel (déconnexion
+ * de sites, historique effacé) plutôt que le réflexe « sans danger ».
+ */
+function friendlyPrivacy(dataType: string): { label: string; note: string; labelEn: string; noteEn: string } | null {
+  const t = dataType.toLowerCase();
+  if (t.includes('cookies')) {
+    return {
+      label: 'Cookies (sessions des sites)', labelEn: 'Cookies (site sessions)',
+      note: '⚠️ Vous serez déconnecté(e) des sites où vous étiez connecté(e) : reconnexion nécessaire partout.',
+      noteEn: '⚠️ You will be signed out of websites you were logged into: you\'ll need to log back in everywhere.',
+    };
+  }
+  if (t.includes('historique de navigation') || t.includes('browsing history')) {
+    return {
+      label: 'Historique de navigation', labelEn: 'Browsing history',
+      note: 'Efface les adresses visitées, recherches et téléchargements. Récupérable depuis la Corbeille pendant ~30 jours.',
+      noteEn: 'Clears visited addresses, searches and downloads. Recoverable from the Recycle Bin for about 30 days.',
+    };
+  }
+  if (t.includes('favicon')) {
+    return {
+      label: 'Icônes des sites visités', labelEn: 'Visited-site icons',
+      note: 'Corrélées à l\'historique de navigation ; se rechargent à la prochaine visite.',
+      noteEn: 'Correlated with browsing history; reload themselves on the next visit.',
+    };
+  }
+  if (t.includes('sites les plus visités') || t.includes('most-visited')) {
+    return {
+      label: 'Raccourcis vers vos sites fréquents', labelEn: 'Shortcuts to your frequent sites',
+      note: 'Juste la page « nouvel onglet » ; sans conséquence sur vos comptes.',
+      noteEn: 'Just the "new tab" page; no effect on your accounts.',
+    };
+  }
+  if (t.includes('restauration de session') || t.includes('session restore')) {
+    return {
+      label: 'Onglets ouverts (restauration de session)', labelEn: 'Open tabs (session restore)',
+      note: 'Les onglets actuellement ouverts ne pourront pas être restaurés après un prochain plantage du navigateur.',
+      noteEn: 'Currently open tabs will not be restorable after the browser\'s next crash.',
+    };
+  }
+  if (t.includes('données posées par les sites') || t.includes('site-set data')) {
+    return {
+      label: 'Stockage local des sites', labelEn: 'Site local storage',
+      note: 'Équivalent des cookies posé par le site lui-même : certains sites vous redemanderont de vous reconnecter.',
+      noteEn: 'Cookie-like data set by the site itself: some sites will ask you to log back in.',
+    };
+  }
+  if (t.includes('historique d\'exécution') || t.includes('execution history')) {
+    return {
+      label: 'Historique de lancement des programmes (Prefetch)', labelEn: 'Program launch history (Prefetch)',
+      note: 'Windows le régénère tout seul ; léger ralentissement au prochain lancement des programmes concernés.',
+      noteEn: 'Windows regenerates it on its own; a slight slowdown on the next launch of the programs involved.',
+    };
+  }
+  if (t.includes('fichiers et documents récemment ouverts') || t.includes('recently opened files & documents')) {
+    return {
+      label: 'Fichiers récents & Jump Lists', labelEn: 'Recent files & Jump Lists',
+      note: 'Vide le menu « Récents » (Démarrer/Explorateur) et les listes de documents récents affichées au clic droit sur une icône de la barre des tâches ; se reconstruit à l\'usage.',
+      noteEn: 'Clears the "Recent" list (Start/Explorer) and the recent-document lists shown when right-clicking a taskbar icon; rebuilds itself as you use your PC.',
+    };
+  }
+  if (t.includes('miniatures') || t.includes('thumbnails')) {
+    return {
+      label: 'Cache de miniatures', labelEn: 'Thumbnail cache',
+      note: 'Les vignettes réapparaîtront à la prochaine consultation des dossiers concernés.',
+      noteEn: 'Thumbnails will reappear the next time you browse the folders concerned.',
+    };
+  }
+  if (t.includes('timeline')) {
+    return {
+      label: 'Historique d\'activité (Timeline)', labelEn: 'Activity history (Timeline)',
+      note: 'Efface l\'historique de ce que vous avez ouvert et quand.',
+      noteEn: 'Clears the history of what you opened and when.',
+    };
+  }
+  if (t.includes('presse-papiers') || t.includes('copied content')) {
+    return {
+      label: 'Historique du presse-papiers', labelEn: 'Clipboard history',
+      note: 'Efface l\'historique du presse-papiers (Win+V), y compris les éléments épinglés.',
+      noteEn: 'Clears clipboard history (Win+V), including pinned items.',
+    };
+  }
+  if (t.includes('saisies de formulaires') || t.includes('form entries')) {
+    return {
+      label: 'Historique de formulaires', labelEn: 'Form entry history',
+      note: 'Efface l\'auto-complétion des formulaires déjà remplis (pas les mots de passe).',
+      noteEn: 'Clears autocomplete suggestions from previously filled forms (not passwords).',
+    };
+  }
+  return null;
+}
+
+/**
  * Construit la liste triée (taille décroissante) des éléments actionnables
  * à partir de l'analyse : entrées AppData 🟢 entières, enfants actionnables
  * des dossiers mixtes, puis findings des modules complémentaires.
@@ -118,10 +217,13 @@ export function buildActionables(a: Analysis): Actionable[] {
   const list: Actionable[] = [];
   let id = 0;
 
-  const push = (label: string, path: string, sizeBytes: number, cls: Classification, opts: { simpleAllowed?: boolean; needsAdmin?: boolean } = {}): void => {
-    if (sizeBytes < 5 * MB) return; // en dessous : bruit
+  const push = (label: string, path: string, sizeBytes: number, cls: Classification, opts: { simpleAllowed?: boolean; needsAdmin?: boolean; simpleCategories?: Category[]; privacy?: boolean; minBytes?: number; purpose?: string; purposeEn?: string } = {}): void => {
+    // En dessous : bruit. Les traces de confidentialité comptent quelle que soit
+    // leur taille (l'enjeu n'est pas l'espace disque) : seuil très bas, pas 5 Mo.
+    if (sizeBytes < (opts.minBytes ?? 5 * MB)) return;
     const del = parseDelete(cls.command);
-    const f = friendly(cls.app, cls.dataType, cls.autoRecreated);
+    const f = (opts.privacy ? friendlyPrivacy(cls.dataType) : null) ?? friendly(cls.app, cls.dataType, cls.autoRecreated);
+    const simpleCats = opts.simpleCategories ?? ['green'];
     list.push({
       id: id++,
       label,
@@ -136,8 +238,11 @@ export function buildActionables(a: Analysis): Actionable[] {
       category: cls.category,
       deleteMode: del?.mode ?? null,
       deletePath: del?.target ?? null,
-      simple: (opts.simpleAllowed ?? true) && cls.category === 'green' && del !== null && (cls.known ?? false) && !(opts.needsAdmin ?? false),
+      simple: (opts.simpleAllowed ?? true) && simpleCats.includes(cls.category) && del !== null && (cls.known ?? false) && !(opts.needsAdmin ?? false),
       needsAdmin: opts.needsAdmin ?? false,
+      privacy: opts.privacy ?? false,
+      purpose: opts.purpose,
+      purposeEn: opts.purposeEn,
       command: cls.command,
     });
   };
@@ -169,9 +274,20 @@ export function buildActionables(a: Analysis): Actionable[] {
         note: f.note, noteEn: f.noteEn, autoRecreated: true, command: f.command, known: true,
       };
       // dev : jamais en mode simple (un novice n'a rien à faire dans node_modules) ;
-      // system : 🟢 éligibles mais souvent admin — signalé.
-      const needsAdmin = s.id === 'system' && /admin/i.test(f.note + (f.command ?? ''));
-      push(f.label, f.path, f.sizeBytes, pseudo, { simpleAllowed: s.id === 'system', needsAdmin });
+      // system : 🟢 éligibles mais souvent admin — signalé ;
+      // privacy : 🟢/🟡 éligibles (avec avertissement dédié), aussi souvent admin (Prefetch).
+      const isPrivacy = s.id === 'privacy';
+      const isSystem = s.id === 'system';
+      const needsAdmin = (isSystem || isPrivacy) && /admin/i.test(f.note + (f.command ?? ''));
+      push(f.label, f.path, f.sizeBytes, pseudo, {
+        simpleAllowed: isSystem || isPrivacy,
+        needsAdmin,
+        simpleCategories: isPrivacy ? ['green', 'yellow'] : ['green'],
+        privacy: isPrivacy,
+        minBytes: isPrivacy ? 1024 : undefined,
+        purpose: f.purpose,
+        purposeEn: f.purposeEn,
+      });
     }
   }
 

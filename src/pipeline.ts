@@ -46,6 +46,9 @@ export interface ScanSummary {
   actionables: Actionable[];
   /** Applications candidates à la désinstallation (conseil, jamais d'action). */
   unusedApps: Array<{ name: string; sizeBytes: number; lastUsed: string | null }>;
+  /** Avertissements du module traces (ex. navigateur ouvert), affichés avant le nettoyage. */
+  privacyNotes: string[];
+  privacyNotesEn: string[];
 }
 
 export const fmt = (b: number): string =>
@@ -113,6 +116,8 @@ export async function runFullScan(opts: PipelineOptions, emit: (ev: ProgressEven
     .slice(0, 5)
     .map((f) => ({ name: f.label.split(' — ')[0], sizeBytes: f.sizeBytes, lastUsed: f.lastActivity ?? null }));
 
+  const privacySection = sections.find((s) => s.id === 'privacy');
+
   const seconds = Math.round((Date.now() - started) / 1000);
   return {
     htmlPath: html,
@@ -125,5 +130,7 @@ export async function runFullScan(opts: PipelineOptions, emit: (ev: ProgressEven
     admin: await isElevated(),
     actionables: buildActionables(analysis),
     unusedApps,
+    privacyNotes: privacySection?.notes ?? [],
+    privacyNotesEn: privacySection?.notesEn ?? [],
   };
 }

@@ -385,6 +385,7 @@ function dashboardHtml(opts: ServerOptions): string {
   :root {
     --bg: #12141a; --panel: #1c1f28; --panel2: #232734; --text: #e6e8ee; --muted: #9aa0b0;
     --green: #3fb950; --yellow: #d29922; --red: #f85149; --accent: #58a6ff; --border: #30363d;
+    --privacy: #d2a8ff;
   }
   * { box-sizing: border-box; }
   body { margin: 0; padding: 24px; background: var(--bg); color: var(--text);
@@ -403,6 +404,7 @@ function dashboardHtml(opts: ServerOptions): string {
   button.sec { background: var(--panel2); color: var(--text); border: 1px solid var(--border);
                border-radius: 8px; padding: 8px 16px; cursor: pointer; font-size: 14px; }
   button.sec:hover { border-color: var(--accent); }
+  button.sec.active { border-color: var(--accent); color: var(--accent); }
   .muted { color: var(--muted); font-size: 13px; }
   .bigsize { font-size: 30px; font-weight: 700; color: var(--green); }
   .bar-outer { height: 10px; background: var(--panel2); border-radius: 5px; overflow: hidden; margin: 14px 0 8px; }
@@ -417,6 +419,14 @@ function dashboardHtml(opts: ServerOptions): string {
   .chip { display: inline-block; padding: 1px 9px; border-radius: 10px; font-size: 12px; font-weight: 600; }
   .chip.green { background: #1a2f22; color: var(--green); }
   .chip.yellow { background: #332a12; color: var(--yellow); }
+  .domain { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; margin-left: 6px; }
+  .domain.privacy { background: #2d1f3d; color: var(--privacy); }
+  .domain.disk { background: #17293f; color: var(--accent); }
+  .purpose { color: var(--text); font-size: 12.5px; margin: 2px 0; }
+  .purpose b { color: var(--privacy); font-weight: 600; }
+  .grouptitle { font-weight: 600; margin: 16px 0 6px; }
+  .grouptitle.privacy { color: var(--privacy); }
+  .grouptitle.disk { color: var(--accent); }
   .ok { color: var(--green); } .ko { color: var(--red); }
   #log { background: #0d1117; border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px;
          height: 260px; overflow-y: auto; font: 12px/1.6 Consolas, monospace; white-space: pre-wrap; margin-top: 12px; }
@@ -497,8 +507,10 @@ function dashboardHtml(opts: ServerOptions): string {
       <div class="muted" id="s-recoverable"></div>
       <div class="bigsize" id="s-total">—</div>
       <div class="muted" id="s-photos"></div>
+      <div class="muted" id="s-privacycount" style="margin-top:4px"></div>
       <div id="s-items" style="margin-top:12px"></div>
       <div id="s-adminhint"></div>
+      <div id="s-privacyhint"></div>
       <button class="big green" id="s-clean" style="margin-top:16px"></button>
       <div class="muted" style="margin-top:8px" id="s-recoverhint"></div>
     </div>
@@ -550,6 +562,11 @@ function dashboardHtml(opts: ServerOptions): string {
 
   <div class="panel" id="e-actions" hidden>
     <h2 style="margin-top:0" id="e-actions-title"></h2>
+    <div style="display:flex;gap:8px;margin-bottom:10px">
+      <button class="sec active" id="ef-all"></button>
+      <button class="sec" id="ef-privacy"></button>
+      <button class="sec" id="ef-disk"></button>
+    </div>
     <table><thead><tr><th></th><th id="th-item"></th><th id="th-size"></th><th id="th-cat"></th><th id="th-cmd"></th></tr></thead>
     <tbody id="e-list"></tbody></table>
     <button class="big green" id="e-clean" style="margin-top:12px;padding:10px 22px;font-size:15px"></button>
@@ -587,6 +604,8 @@ const I18N = {
     sRecoverable: 'Espace récupérable sans risque',
     sClean: '🧹 Nettoyer (envoyer à la Corbeille)',
     sRecoverHint: 'Récupérable depuis la Corbeille pendant environ 30 jours.',
+    privacyCount: (n) => '🕵️ + ' + n + ' trace' + (n > 1 ? 's' : '') + ' de confidentialité sélectionnée' + (n > 1 ? 's' : ''),
+    sDiskTitle: '💾 Espace disque',
     sAppsTitle: '💡 Pour aller plus loin',
     sAppsText: 'Ces programmes semblent inutilisés depuis longtemps. Si vous ne les reconnaissez pas ou ne vous en servez plus, vous pouvez les désinstaller :',
     sOpenApps: 'Ouvrir « Applications installées » de Windows',
@@ -600,6 +619,7 @@ const I18N = {
     nothing: 'Rien à nettoyer : votre ordinateur est déjà propre ! 🎉',
     adminHint: '🔐 Certains fichiers de Windows ne sont accessibles qu\\'en mode administrateur. <a id="s-relaunch">Relancer en administrateur</a> (une confirmation Windows s\\'affichera).',
     confirmClean: (s) => 'Envoyer ' + s + ' de fichiers inutiles à la Corbeille ?\\n\\nVous pourrez les restaurer pendant environ 30 jours.',
+    confirmCleanPrivacy: (s) => 'Envoyer ' + s + ' à la Corbeille ?\\n\\n⚠️ La sélection inclut des traces de navigation : vous serez déconnecté(e) des sites concernés et/ou perdrez l\\'historique correspondant.\\n\\nVous pourrez tout restaurer depuis la Corbeille pendant environ 30 jours.',
     confirmCleanExpert: (n, s) => 'Envoyer ' + n + ' élément(s) (' + s + ') à la Corbeille ?',
     cleanErrors: (l) => 'Certains éléments n\\'ont pas pu être nettoyés (fichiers en cours d\\'utilisation) — fermez les applications concernées et réessayez : ' + l,
     relaunchMsg: 'L\\'outil va se relancer : acceptez la demande d\\'autorisation de Windows, puis la page se rouvrira toute seule.',
@@ -629,11 +649,15 @@ const I18N = {
     segSimple: 'Simple', segExpert: '🛠 Expert',
     expertWarn: 'Le mode expert affiche des options avancées : éléments à supprimer avec précaution, commandes système, rapports techniques.\\n\\nSi vous n\\'êtes pas sûr, restez en mode Simple. Continuer ?',
     cat: { green: '🟢 Sans risque', yellow: '🟡 Précaution' },
+    sPrivacyTitle: '🕵️ Vie privée', simpleCaution: '🟡 Prudence', purposeLabel: 'À quoi ça sert :',
+    domain: { privacy: '🕵️ Vie privée', disk: '💾 Espace disque' },
+    filterAll: 'Tous', filterPrivacy: '🕵️ Vie privée', filterDisk: '💾 Espace disque',
     admin: 'admin', copy: 'copier', copied: 'copié ✓',
     obNext: 'Continuer', obStart: 'C\\'est parti !',
     ob: [
       ['👻', 'Bienvenue !', 'Cet outil analyse votre ordinateur et trouve les fichiers inutiles et les traces qui prennent de la place, comme les fichiers temporaires, la télémétrie et les restes de programmes désinstallés.'],
       ['🔒', 'Vos données sont protégées', 'Il ne touche jamais à vos documents, photos, mots de passe ou réglages. Seuls des fichiers sans danger, que Windows ou vos applications recréent tout seuls, sont proposés.'],
+      ['🕵️', 'Vos traces aussi', 'L\\'outil détecte également ce qui trace votre activité : cookies, historique de navigation, Prefetch… Ces éléments sont signalés par un avertissement ⚠️ avant tout nettoyage — mots de passe et favoris ne sont jamais touchés.'],
       ['♻️', 'Toujours réversible', 'Tout ce qui est nettoyé part dans la Corbeille. En cas de doute, vous pouvez tout restaurer pendant environ 30 jours.'],
       ['🛠', 'Pour les connaisseurs', 'Un mode Expert (bouton en haut à droite) donne accès au détail technique : rapports complets, commandes, éléments avancés. Pour l\\'usage courant, le mode Simple suffit.'],
     ],
@@ -648,6 +672,8 @@ const I18N = {
     sRecoverable: 'Space recoverable at no risk',
     sClean: '🧹 Clean up (send to Recycle Bin)',
     sRecoverHint: 'Recoverable from the Recycle Bin for about 30 days.',
+    privacyCount: (n) => '🕵️ + ' + n + ' privacy trace' + (n > 1 ? 's' : '') + ' selected',
+    sDiskTitle: '💾 Disk space',
     sAppsTitle: '💡 Going further',
     sAppsText: 'These programs look unused for a long time. If you don\\'t recognize them or no longer use them, you can uninstall them:',
     sOpenApps: 'Open Windows "Installed apps"',
@@ -661,6 +687,7 @@ const I18N = {
     nothing: 'Nothing to clean: your computer is already tidy! 🎉',
     adminHint: '🔐 Some Windows files are only accessible in administrator mode. <a id="s-relaunch">Relaunch as administrator</a> (a Windows confirmation will appear).',
     confirmClean: (s) => 'Send ' + s + ' of unneeded files to the Recycle Bin?\\n\\nYou can restore them for about 30 days.',
+    confirmCleanPrivacy: (s) => 'Send ' + s + ' to the Recycle Bin?\\n\\n⚠️ The selection includes browsing traces: you will be signed out of the sites concerned and/or lose the matching history.\\n\\nYou can restore everything from the Recycle Bin for about 30 days.',
     confirmCleanExpert: (n, s) => 'Send ' + n + ' item(s) (' + s + ') to the Recycle Bin?',
     cleanErrors: (l) => 'Some items could not be cleaned (files in use) — close the related applications and try again: ' + l,
     relaunchMsg: 'The tool will relaunch: accept the Windows permission prompt, then the page will reopen on its own.',
@@ -690,11 +717,15 @@ const I18N = {
     segSimple: 'Simple', segExpert: '🛠 Expert',
     expertWarn: 'Expert mode shows advanced options: items to delete with caution, system commands, technical reports.\\n\\nIf unsure, stay in Simple mode. Continue?',
     cat: { green: '🟢 No risk', yellow: '🟡 Caution' },
+    sPrivacyTitle: '🕵️ Privacy', simpleCaution: '🟡 Caution', purposeLabel: 'What it\\'s for:',
+    domain: { privacy: '🕵️ Privacy', disk: '💾 Disk space' },
+    filterAll: 'All', filterPrivacy: '🕵️ Privacy', filterDisk: '💾 Disk space',
     admin: 'admin', copy: 'copy', copied: 'copied ✓',
     obNext: 'Continue', obStart: 'Let\\'s go!',
     ob: [
       ['👻', 'Welcome!', 'This tool analyzes your computer and finds junk files and tracking traces taking up space, such as temporary files, telemetry caches, and leftovers from uninstalled programs.'],
       ['🔒', 'Your data is protected', 'It never touches your documents, photos, passwords or settings. Only safe files, which Windows or your applications recreate on their own, are offered.'],
+      ['🕵️', 'Your traces too', 'The tool also detects what tracks your activity: cookies, browsing history, Prefetch… These items carry a ⚠️ warning before any cleanup — passwords and bookmarks are never touched.'],
       ['♻️', 'Always reversible', 'Everything cleaned goes to the Recycle Bin. If in doubt, you can restore everything for about 30 days.'],
       ['🛠', 'For power users', 'An Expert mode (button at the top right) gives access to technical detail: full reports, commands, advanced items. For everyday use, Simple mode is enough.'],
     ],
@@ -749,6 +780,7 @@ function applyLang() {
   $('e-psadmin').textContent = T.psAdmin;
   $('e-adminrelaunch').textContent = T.adminRelaunch;
   $('e-actions-title').textContent = T.eActionsTitle;
+  $('ef-all').textContent = T.filterAll; $('ef-privacy').textContent = T.filterPrivacy; $('ef-disk').textContent = T.filterDisk;
   $('th-item').textContent = T.thItem; $('th-size').textContent = T.thSize;
   $('th-cat').textContent = T.thCat; $('th-cmd').textContent = T.thCmd;
   $('e-clean').textContent = T.eCleanSel;
@@ -892,19 +924,35 @@ function renderSimpleResults() {
     '<div class="item"><div class="t">' + a.name + '<div class="n">' + (a.lastUsed ? T.lastUse + ' ' + a.lastUsed : '') + '</div></div><div class="s">' + fmt(a.sizeBytes) + '</div></div>').join('');
   // admin
   $('s-adminhint').innerHTML = summary.admin ? '' : '<div class="hint">' + T.adminHint + '</div>';
+  // privacy (ex. navigateur ouvert pendant que ses cookies/historique sont proposés)
+  const pnotes = (lang === 'en' && summary.privacyNotesEn && summary.privacyNotesEn.length) ? summary.privacyNotesEn : (summary.privacyNotes || []);
+  $('s-privacyhint').innerHTML = pnotes.length ? '<div class="hint">🕵️ ' + pnotes.join('<br>') + '</div>' : '';
   const rl = $('s-relaunch');
   if (rl) rl.addEventListener('click', relaunchAdmin);
 }
+function renderSimpleItem(a) {
+  const purpose = a.privacy && pick(a.purpose, a.purposeEn)
+    ? '<div class="purpose"><b>' + T.purposeLabel + '</b> ' + pick(a.purpose, a.purposeEn) + '</div>' : '';
+  return '<div class="item"><input type="checkbox" data-id="' + a.id + '"' + (simpleChecked.has(a.id) ? ' checked' : '') + '>'
+    + '<div class="t">' + pick(a.friendlyLabel, a.friendlyLabelEn) + (a.category !== 'green' ? ' <span class="chip ' + a.category + '">' + T.simpleCaution + '</span>' : '')
+    + purpose
+    + '<div class="n">' + pick(a.friendlyNote, a.friendlyNoteEn) + '</div></div>'
+    + '<div class="s">' + fmt(a.sizeBytes) + '</div></div>';
+}
 function drawSimpleItems(items) {
-  const total = items.filter((a) => simpleChecked.has(a.id)).reduce((s, a) => s + a.sizeBytes, 0);
+  const disk = items.filter((a) => !a.privacy);
+  const priv = items.filter((a) => a.privacy);
+  const total = disk.filter((a) => simpleChecked.has(a.id)).reduce((s, a) => s + a.sizeBytes, 0);
+  const privCount = priv.filter((a) => simpleChecked.has(a.id)).length;
   $('s-total').textContent = fmt(total);
   $('s-photos').textContent = total > 200 * 1024 * 1024 ? T.photos(Math.round(total / (4 * 1024 * 1024))) : '';
-  $('s-clean').disabled = total === 0;
-  $('s-items').innerHTML = items.map((a) =>
-    '<div class="item"><input type="checkbox" data-id="' + a.id + '"' + (simpleChecked.has(a.id) ? ' checked' : '') + '>'
-    + '<div class="t">' + pick(a.friendlyLabel, a.friendlyLabelEn) + '<div class="n">' + pick(a.friendlyNote, a.friendlyNoteEn) + '</div></div>'
-    + '<div class="s">' + fmt(a.sizeBytes) + '</div></div>').join('')
-    || '<p class="muted">' + T.nothing + '</p>';
+  $('s-privacycount').textContent = privCount > 0 ? T.privacyCount(privCount) : '';
+  $('s-clean').disabled = total === 0 && privCount === 0;
+  let html = disk.length ? '<div class="grouptitle disk">' + T.sDiskTitle + '</div>' + disk.map(renderSimpleItem).join('') : '';
+  if (priv.length) {
+    html += '<div class="grouptitle privacy">' + T.sPrivacyTitle + '</div>' + priv.map(renderSimpleItem).join('');
+  }
+  $('s-items').innerHTML = html || '<p class="muted">' + T.nothing + '</p>';
   $('s-items').querySelectorAll('input').forEach((cb) => cb.addEventListener('change', () => {
     const id = Number(cb.dataset.id);
     cb.checked ? simpleChecked.add(id) : simpleChecked.delete(id);
@@ -915,8 +963,10 @@ $('s-scan').addEventListener('click', () => api('/api/scan', { skip: ['dev'] }))
 $('s-again').addEventListener('click', () => api('/api/scan', { skip: ['dev'] }));
 $('s-clean').addEventListener('click', () => {
   const ids = [...simpleChecked];
-  const total = simpleItems().filter((a) => simpleChecked.has(a.id)).reduce((s, a) => s + a.sizeBytes, 0);
-  if (confirm(T.confirmClean(fmt(total)))) api('/api/clean', { ids });
+  const selected = simpleItems().filter((a) => simpleChecked.has(a.id));
+  const total = selected.reduce((s, a) => s + a.sizeBytes, 0);
+  const msg = selected.some((a) => a.category !== 'green') ? T.confirmCleanPrivacy(fmt(total)) : T.confirmClean(fmt(total));
+  if (confirm(msg)) api('/api/clean', { ids });
 });
 function showCleanDone(freed, results) {
   simpleShow('s-done');
@@ -978,13 +1028,26 @@ function renderExpertActions() {
   expertChecked = new Set(items.filter((a) => a.category === 'green' && a.deleteMode).map((a) => a.id));
   drawExpert(items);
 }
-function drawExpert(items) {
-  $('e-list').innerHTML = items.map((a) =>
-    '<tr><td>' + (a.deleteMode ? '<input type="checkbox" data-id="' + a.id + '"' + (expertChecked.has(a.id) ? ' checked' : '') + '>' : '') + '</td>'
-    + '<td>' + a.label + (a.needsAdmin ? ' <span class="chip yellow">' + T.admin + '</span>' : '') + '</td>'
+let expertDomainFilter = 'all';
+function expertRow(a) {
+  const purpose = a.privacy && pick(a.purpose, a.purposeEn)
+    ? '<div class="purpose"><b>' + T.purposeLabel + '</b> ' + pick(a.purpose, a.purposeEn) + '</div>' : '';
+  return '<tr><td>' + (a.deleteMode ? '<input type="checkbox" data-id="' + a.id + '"' + (expertChecked.has(a.id) ? ' checked' : '') + '>' : '') + '</td>'
+    + '<td>' + a.label + (a.needsAdmin ? ' <span class="chip yellow">' + T.admin + '</span>' : '') + purpose + '</td>'
     + '<td class="size">' + fmt(a.sizeBytes) + '</td>'
     + '<td><span class="chip ' + a.category + '">' + T.cat[a.category] + '</span></td>'
-    + '<td class="cmd">' + (a.command ? '<code title="' + a.command.replace(/"/g, '&quot;') + '">' + a.command.replace(/</g, '&lt;') + '</code> <button class="copy" data-cmd="' + a.command.replace(/"/g, '&quot;') + '">' + T.copy + '</button>' : '') + '</td></tr>').join('');
+    + '<td class="cmd">' + (a.command ? '<code title="' + a.command.replace(/"/g, '&quot;') + '">' + a.command.replace(/</g, '&lt;') + '</code> <button class="copy" data-cmd="' + a.command.replace(/"/g, '&quot;') + '">' + T.copy + '</button>' : '') + '</td></tr>';
+}
+function expertGroupRow(cls, title) {
+  return '<tr><td colspan="5" class="grouptitle ' + cls + '" style="border-bottom:1px solid var(--border)">' + title + '</td></tr>';
+}
+function drawExpert(items) {
+  const visible = items.filter((a) => expertDomainFilter === 'all' || (expertDomainFilter === 'privacy') === !!a.privacy);
+  const disk = visible.filter((a) => !a.privacy);
+  const priv = visible.filter((a) => a.privacy);
+  let html = disk.length ? expertGroupRow('disk', T.sDiskTitle) + disk.map(expertRow).join('') : '';
+  if (priv.length) html += expertGroupRow('privacy', T.sPrivacyTitle) + priv.map(expertRow).join('');
+  $('e-list').innerHTML = html;
   const sel = items.filter((a) => expertChecked.has(a.id));
   $('e-selinfo').textContent = T.selInfo(sel.length, fmt(sel.reduce((s, a) => s + a.sizeBytes, 0)));
   $('e-clean').disabled = sel.length === 0;
@@ -997,6 +1060,11 @@ function drawExpert(items) {
     navigator.clipboard.writeText(b.dataset.cmd).then(() => { b.textContent = T.copied; setTimeout(() => (b.textContent = T.copy), 1500); });
   }));
 }
+['all', 'privacy', 'disk'].forEach((f) => $('ef-' + f).addEventListener('click', () => {
+  expertDomainFilter = f;
+  ['all', 'privacy', 'disk'].forEach((x) => $('ef-' + x).classList.toggle('active', x === f));
+  drawExpert(summary.actionables || []);
+}));
 $('e-clean').addEventListener('click', () => {
   const sel = (summary.actionables || []).filter((a) => expertChecked.has(a.id));
   if (confirm(T.confirmCleanExpert(sel.length, fmt(sel.reduce((s, a) => s + a.sizeBytes, 0))))) {

@@ -22,6 +22,10 @@ export interface Finding {
   note: string;
   /** Traduction anglaise de la note (fallback : note). */
   noteEn?: string;
+  /** À quoi sert ce fichier (pédagogie, distinct de la conséquence d'une suppression). */
+  purpose?: string;
+  /** Traduction anglaise de purpose (fallback : purpose). */
+  purposeEn?: string;
   /** Commande suggérée (jamais exécutée par l'outil). */
   command?: string;
   /** Date ISO de dernière activité connue, ou null si inconnue. */
