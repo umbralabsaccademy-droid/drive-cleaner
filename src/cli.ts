@@ -150,11 +150,16 @@ async function main(): Promise<void> {
           openAppWindow(url);
           return;
         }
-        if (attempt >= 10) {
+        // Generous budget: an elevated SEA relaunch can be slowed for many
+        // seconds by AV/SmartScreen reputation checks on the freshly-run
+        // unsigned binary — must comfortably outlast that, and stay under
+        // the frontend's ~92.5s polling window (see relaunchAdmin() in
+        // server.ts) so a late success still gets picked up by the page.
+        if (attempt >= 75) {
           console.error(`Port ${args.port} is busy but unresponsive — giving up. Close the stuck process or use --port.`);
           process.exit(1);
         }
-        await new Promise((r) => setTimeout(r, 800));
+        await new Promise((r) => setTimeout(r, 1000));
       }
     }
   }

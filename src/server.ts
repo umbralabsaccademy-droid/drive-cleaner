@@ -274,7 +274,7 @@ export function startServer(baseOpts: ServerOptions, port: number): Promise<void
         : `'${process.argv[1].replace(/'/g, "''")}','--serve','--port','${port}','--auto-exit'`;
       execFile(
         'powershell.exe',
-        ['-NoProfile', '-Command', `Start-Process '${target.replace(/'/g, "''")}' -ArgumentList ${argList} -Verb RunAs`],
+        ['-NoProfile', '-Command', `Start-Process '${target.replace(/'/g, "''")}' -ArgumentList ${argList} -Verb RunAs -WindowStyle Hidden`],
         { windowsHide: true, timeout: 120_000 },
         (err) => {
           if (err) {
@@ -934,8 +934,20 @@ async function relaunchAdmin() {
     } catch { /* server not back yet */ }
     await new Promise((r) => setTimeout(r, 1000));
   }
-  alert(T.relaunchFail);
-  location.reload();
+  // Do NOT location.reload() here: the port is very likely still dead (an
+  // elevated SEA start can be slowed well past 90s by AV/SmartScreen
+  // reputation checks on the freshly-run unsigned binary), and navigating
+  // now would just swap our page for the browser's own ERR_CONNECTION_REFUSED
+  // screen. Tell the user, then keep quietly polling in the background and
+  // reload as soon as the server actually answers.
+  $('ob-text').textContent = T.relaunchFail;
+  for (let i = 0; i < 180; i++) {
+    await new Promise((r) => setTimeout(r, 2000));
+    try {
+      const r = await fetch('/api/state', { cache: 'no-store' });
+      if (r.ok) { location.reload(); return; }
+    } catch { /* still not back */ }
+  }
 }
 
 // ===== Expert mode =====
