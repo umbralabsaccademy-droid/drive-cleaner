@@ -1,6 +1,6 @@
 ﻿{
   "name": "ghosttrace",
-  "version": "2.1.3",
+  "version": "2.1.4",
   "description": "GhostTrace — safe, transparent Windows cleanup of junk files and tracking/telemetry traces: read-only analysis, Recycle Bin cleanup only, 100% local, zero dependencies. Bilingual EN/FR.",
   "author": "Umbra Labs (https://www.academy.umbra-labs.dev/)",
   "license": "MIT",
