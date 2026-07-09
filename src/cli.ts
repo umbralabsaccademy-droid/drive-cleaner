@@ -19,6 +19,7 @@ import { exec, execFile, spawn } from 'node:child_process';
 import { isSea } from 'node:sea';
 import { runFullScan, fmt } from './pipeline.ts';
 import { startServer, type ServerOptions } from './server.ts';
+import { logDebug } from './debug-log.ts';
 
 interface CliArgs extends ServerOptions {
   open: boolean;
@@ -111,6 +112,7 @@ function openAppWindow(url: string): void {
 
 async function main(): Promise<void> {
   const rawArgs = process.argv.slice(2);
+  logDebug(`main() start argv=${JSON.stringify(rawArgs)} execPath=${process.execPath} cwd=${process.cwd()} isSea=${isSea()}`);
   const args = parseArgs(rawArgs);
 
   // Double-clic sur l'exe (aucun argument) : on se relance soi-même en
@@ -140,12 +142,17 @@ async function main(): Promise<void> {
     for (let attempt = 0; ; attempt++) {
       try {
         await startServer(args, args.port);
+        logDebug(`serve: listening on port ${args.port} (attempt ${attempt})`);
         if (args.open) openAppWindow(url);
         return;
       } catch (err) {
         const busy = err instanceof Error && 'code' in err && (err as NodeJS.ErrnoException).code === 'EADDRINUSE';
-        if (!busy) throw err;
+        if (!busy) {
+          logDebug(`serve: startServer failed (non-EADDRINUSE): ${err instanceof Error ? (err.stack ?? err.message) : String(err)}`);
+          throw err;
+        }
         if (await probeAlive(url)) {
+          logDebug(`serve: port ${args.port} busy with a LIVE instance (attempt ${attempt}) — opening its window.`);
           console.log(`An instance is already listening on ${url} — opening the existing window.`);
           openAppWindow(url);
           return;
@@ -156,6 +163,7 @@ async function main(): Promise<void> {
         // the frontend's ~92.5s polling window (see relaunchAdmin() in
         // server.ts) so a late success still gets picked up by the page.
         if (attempt >= 75) {
+          logDebug(`serve: giving up on port ${args.port} after ${attempt} unresponsive-busy attempts`);
           console.error(`Port ${args.port} is busy but unresponsive — giving up. Close the stuck process or use --port.`);
           process.exit(1);
         }
@@ -183,6 +191,7 @@ async function main(): Promise<void> {
 }
 
 main().catch((err) => {
+  logDebug(`main() uncaught error: ${err instanceof Error ? (err.stack ?? err.message) : String(err)}`);
   console.error('Erreur fatale :', err);
   process.exit(1);
 });

@@ -24,6 +24,7 @@ import path from 'node:path';
 import { runFullScan, type PipelineOptions, type ScanSummary } from './pipeline.ts';
 import { cleanToRecycleBin, type CleanTarget, type CleanResult } from './cleaner.ts';
 import { FAVICON_ICO_B64, LOGO_PNG_B64, SITE_URL, TWITTER_URL, TWITTER_HANDLE } from './branding.ts';
+import { logDebug } from './debug-log.ts';
 
 // Decoded once at startup; served on /favicon.ico and /logo.png so pages
 // reference cacheable URLs instead of inflating every HTML response.
@@ -272,15 +273,19 @@ export function startServer(baseOpts: ServerOptions, port: number): Promise<void
       const argList = isSea
         ? `'--serve','--port','${port}','--auto-exit'`
         : `'${process.argv[1].replace(/'/g, "''")}','--serve','--port','${port}','--auto-exit'`;
+      const psCommand = `Start-Process '${target.replace(/'/g, "''")}' -ArgumentList ${argList} -Verb RunAs -WindowStyle Hidden`;
+      logDebug(`relaunch-admin: launching -Command: ${psCommand}`);
       execFile(
         'powershell.exe',
-        ['-NoProfile', '-Command', `Start-Process '${target.replace(/'/g, "''")}' -ArgumentList ${argList} -Verb RunAs -WindowStyle Hidden`],
+        ['-NoProfile', '-Command', psCommand],
         { windowsHide: true, timeout: 120_000 },
-        (err) => {
+        (err, stdout, stderr) => {
           if (err) {
+            logDebug(`relaunch-admin: Start-Process failed — err=${err.message} stdout=${stdout} stderr=${stderr}`);
             console.log('Elevated relaunch refused or failed — staying alive.');
             return;
           }
+          logDebug(`relaunch-admin: Start-Process returned OK — closing this instance in 400ms. stdout=${stdout} stderr=${stderr}`);
           setTimeout(() => {
             server.close();
             process.exit(0);
