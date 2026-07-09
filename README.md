@@ -4,7 +4,7 @@
 
 # 👻 GhostTrace
 
-> Clear gigabytes of junk files and tracking/telemetry traces on Windows **without ever risking your data** — read-only analysis, cleanup through the Recycle Bin only, 100% local, open source.
+> See exactly what tracks you on Windows — cookies, browsing history, Prefetch, activity timeline — and clear gigabytes of ordinary junk alongside it, **without ever risking your data**. Read-only analysis, cleanup through the Recycle Bin only, 100% local, open source.
 
 **🌍 Languages:** English (this file) · [Français](README.fr.md) — the app itself is bilingual (FR/EN, auto-detected, switchable).
 
@@ -13,6 +13,7 @@
 ![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-blue.svg)
 ![Node](https://img.shields.io/badge/node-%E2%89%A5%2022.18-brightgreen.svg)
 ![Dependencies](https://img.shields.io/badge/dependencies-0-orange.svg)
+![Privacy](https://img.shields.io/badge/privacy-cookies%2C%20history%2C%20Prefetch...-8a2be2.svg)
 
 An [Umbra Labs](https://www.academy.umbra-labs.dev/) tool — [@xumbralabs](https://x.com/xumbralabs)
 
@@ -23,19 +24,33 @@ An [Umbra Labs](https://www.academy.umbra-labs.dev/) tool — [@xumbralabs](http
 Classic disk cleaners are black boxes: you don't know what they delete, why, or what they phone home. This one takes the opposite stance:
 
 - 🔍 **Transparent** — every suggested item is explained: which application owns it, why it's removable, what happens afterwards. The code is open — read it.
+- 🕵️ **Privacy-aware** — cookies, browsing history, saved sessions, Prefetch, Windows Timeline and more are detected across Chrome, Edge and Firefox, each explained in plain language: what it's actually *for*, not just whether it's "safe" to delete.
 - ♻️ **Reversible** — everything cleaned goes to the **Recycle Bin** (recoverable for ~30 days). Never a permanent delete.
 - 🔒 **Local** — no outbound network connection, no telemetry, no account. The built-in web server only listens on `127.0.0.1`.
 - 🧠 **Cautious by design** — an unknown folder is **never** classified "safe to delete". Profiles, passwords, wallets and user data are detected and untouchable.
 - 📦 **Zero dependencies** — standard Node.js only. No `node_modules`, no supply chain to audit.
 
+## 🕵️ Privacy traces, explained — not just deleted
+
+Most cleaners either ignore browsing/activity traces entirely, or wipe them blindly. GhostTrace does neither:
+
+- **Detects them specifically** — cookies, browsing/search history, saved sessions, site storage, favicons and top sites for **Chrome, Edge and Firefox**; plus Windows-level traces: **Prefetch** (a log of every program you've recently run), **Recent files & Jump Lists**, the **thumbnail cache**, **Windows Timeline/Activity History**, and **clipboard history**.
+- **Explains what each file is actually for**, before you decide anything — e.g. *"A site sets this cookie to recognize you across visits — staying logged in, remembering a cart — but also, very often, to track your browsing for advertising purposes."* The goal is understanding, not just a delete button.
+- **Draws a hard line on what it will never touch**: saved passwords, saved payment/autofill data, and Firefox's `places.sqlite` (which mixes browsing history with your bookmarks in a single file) are shown for your information but **never** offered for deletion — that's not tracking, it's data you'd actually miss.
+- **Warns you about consequences that matter** — clearing cookies logs you out everywhere; a running browser means its files are locked — instead of a generic "done" message.
+- **Kept visually distinct from disk-space cleanup** in both modes — 💾 *Disk space* and 🕵️ *Privacy* are always shown as two separate groups, so you always know which kind of cleanup you're doing.
+
+Everything above still goes through the same Recycle Bin safety net as disk-space cleanup: reversible for ~30 days, nothing permanent.
+
 ## Two modes, two audiences
 
-**Simple mode** (default) — for everyone: one "Analyze my computer" button, plain-language explanations, and only items **certified safe** by the rule base are offered. Explanation screens on first launch.
+**Simple mode** (default) — for everyone: one "Analyze my computer" button, plain-language explanations, split into two clearly labeled groups (💾 *Disk space* / 🕵️ *Privacy*), and only items **certified safe** by the rule base are offered. Explanation screens on first launch.
 
-**Expert mode** (selector at the top right) — for technical users: full detail per folder (AppData levels 1-2, developer caches, system areas, unused applications), 🟢/🟡/🔴 categories, ready-to-copy PowerShell commands, archivable HTML/JSON reports, scan-over-scan evolution tracking, relaunch as admin.
+**Expert mode** (selector at the top right) — for technical users: the same 💾/🕵️ split plus a quick filter, full detail per folder (AppData levels 1-2, developer caches, system areas, unused applications), 🟢/🟡/🔴 categories, ready-to-copy PowerShell commands, archivable HTML/JSON reports, scan-over-scan evolution tracking, relaunch as admin.
 
 ## Features
 
+- **Privacy traces** across Chrome/Edge/Firefox and Windows itself (cookies, history, Prefetch, Jump Lists, Timeline…), each explained — see above
 - **AppData** analysis (Local, LocalLow, Roaming) classified by a base of ~60 rules + cautious heuristics
 - **MSIX mirror** detection (same physical content counted twice) through NTFS inode comparison
 - **Developer caches**: orphaned `node_modules`, Gradle/Maven/NuGet/pip/Expo caches, Android emulator images, WSL/Docker virtual disks (with the compaction procedure)
@@ -79,7 +94,7 @@ npm run build:exe    # build your own exe (dist\ghosttrace.exe)
 ```
 ghosttrace [--serve] [--port 7113] [--open] [--auto-exit]
            [--path <AppData>] [--out <folder>] [--workspaces <folder>]
-           [--skip dev,system,apps,history] [--concurrency 32]
+           [--skip dev,system,apps,privacy,history] [--concurrency 32]
 ```
 
 Run as **administrator** to also measure the full recycle bin, Windows areas, restore points and Prefetch (a "Relaunch as admin" button also exists in the UI).
@@ -109,6 +124,7 @@ src/
 ├── devcaches.ts    Developer caches module
 ├── system.ts       System areas module (admin elevation detection)
 ├── apps.ts         Installed applications module (registry + UserAssist + Prefetch)
+├── privacy.ts      🕵️ Privacy/activity-traces module (cookies, history, Prefetch, Timeline… across Chrome/Edge/Firefox)
 ├── history.ts      Scan history (append-only JSONL) and evolution computation
 ├── actionables.ts  Cleanable items + simple-mode guardrails + plain-language labels (FR/EN)
 ├── cleaner.ts      Recycle Bin cleanup (sequential, verified results)
@@ -134,9 +150,13 @@ The most useful contribution: **extending the rule base** ([src/knowledge.ts](sr
 
 Golden rules of the project: an unknown is never 🟢, user data (profiles, wallets, credentials) is always 🔴, and when in doubt choose 🟡 with the consequence spelled out. Please provide both French and English texts.
 
+Found a tracking file we're missing (another browser, a new Windows feature)? [src/privacy.ts](src/privacy.ts) is the module to extend — each entry needs a plain-language `purpose`/`purposeEn` (what it's for) in addition to the usual `note`/`noteEn` (what happens if you delete it).
+
 Issues and pull requests welcome. No external dependencies — that's a principle, not an oversight.
 
 ## FAQ
+
+**Does this replace clearing cookies/history from my browser's own settings?** Not exactly — think of it as a second pass: it also catches what browsers don't give you a one-click button for (Prefetch, Windows Timeline, Jump Lists, thumbnail cache…), across all your browsers at once, and explains what each item actually does before you clear it.
 
 **Why is the exe 83 MB?** It embeds the full Node.js runtime (Node SEA): zero prerequisites on your machine in exchange.
 
