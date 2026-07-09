@@ -270,9 +270,13 @@ export function startServer(baseOpts: ServerOptions, port: number): Promise<void
       // No --open: the requesting page polls and reloads itself.
       const isSea = !process.execPath.toLowerCase().endsWith('node.exe');
       const target = process.execPath;
+      // --takeover: this port is about to be freed by THIS instance, not
+      // held long-term by a third party — the new instance must retry the
+      // bind instead of probing, concluding "already running" and opening a
+      // redundant window while never actually taking over the port.
       const argList = isSea
-        ? `'--serve','--port','${port}','--auto-exit'`
-        : `'${process.argv[1].replace(/'/g, "''")}','--serve','--port','${port}','--auto-exit'`;
+        ? `'--serve','--port','${port}','--auto-exit','--takeover'`
+        : `'${process.argv[1].replace(/'/g, "''")}','--serve','--port','${port}','--auto-exit','--takeover'`;
       const psCommand = `Start-Process '${target.replace(/'/g, "''")}' -ArgumentList ${argList} -Verb RunAs -WindowStyle Hidden`;
       logDebug(`relaunch-admin: launching -Command: ${psCommand}`);
       execFile(

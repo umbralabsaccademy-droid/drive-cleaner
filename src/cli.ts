@@ -25,6 +25,13 @@ interface CliArgs extends ServerOptions {
   open: boolean;
   serve: boolean;
   port: number;
+  /** Admin-relaunch handover: the port's current occupant is expected to
+   *  exit any moment (see server.ts's /api/relaunch-admin). Skip the
+   *  probe-and-open-a-window shortcut on EADDRINUSE and just keep retrying
+   *  the bind instead — a single alive-probe can't tell "will stay up" from
+   *  "about to die", and the old instance reliably answers alive for a
+   *  little while after announcing its own shutdown. */
+  takeover: boolean;
 }
 
 function parseArgs(argv: string[]): CliArgs {
@@ -38,6 +45,7 @@ function parseArgs(argv: string[]): CliArgs {
     open: false,
     serve: false,
     autoExit: false,
+    takeover: false,
     port: 7113,
   };
   for (let i = 0; i < argv.length; i++) {
@@ -51,6 +59,7 @@ function parseArgs(argv: string[]): CliArgs {
       case '--open': args.open = true; break;
       case '--serve': args.serve = true; break;
       case '--auto-exit': args.autoExit = true; break;
+      case '--takeover': args.takeover = true; break;
       case '--help':
       case '-h':
         console.log('Usage : appdata-analyzer [--serve] [--port 7113] [--path <AppData>] [--out <dossier>]');
@@ -151,11 +160,20 @@ async function main(): Promise<void> {
           logDebug(`serve: startServer failed (non-EADDRINUSE): ${err instanceof Error ? (err.stack ?? err.message) : String(err)}`);
           throw err;
         }
-        if (await probeAlive(url)) {
+        // In takeover mode a single alive-probe is meaningless: the current
+        // occupant (the pre-elevation instance) reliably still answers for
+        // a little while after announcing its own shutdown, so trusting the
+        // probe here would make us bail out and open a redundant window
+        // instead of ever becoming the server — every time, deterministically,
+        // since we start faster than its shutdown delay.
+        if (!args.takeover && (await probeAlive(url))) {
           logDebug(`serve: port ${args.port} busy with a LIVE instance (attempt ${attempt}) — opening its window.`);
           console.log(`An instance is already listening on ${url} — opening the existing window.`);
           openAppWindow(url);
           return;
+        }
+        if (args.takeover && attempt === 0) {
+          logDebug(`serve: takeover mode — port ${args.port} still held (probably the outgoing instance), retrying without opening a window.`);
         }
         // Generous budget: an elevated SEA relaunch can be slowed for many
         // seconds by AV/SmartScreen reputation checks on the freshly-run
