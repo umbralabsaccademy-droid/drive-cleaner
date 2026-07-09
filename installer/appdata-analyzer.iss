@@ -7,7 +7,7 @@
 ; raccourcis Menu Démarrer + Bureau (optionnel), désinstallation propre.
 
 #define AppName "GhostTrace"
-#define AppVersion "2.1.0"
+#define AppVersion "2.1.3"
 #define AppExe "ghosttrace.exe"
 
 [Setup]
