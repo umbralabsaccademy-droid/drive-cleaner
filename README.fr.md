@@ -4,6 +4,8 @@
 
 # 👻 GhostTrace
 
+![Démo GhostTrace](assets/screenshots/demo.gif)
+
 > Découvrez précisément ce qui vous trace sur Windows — cookies, historique de navigation, Prefetch, chronologie d'activité — et supprimez des gigas de fichiers inutiles au passage, **sans jamais risquer vos données**. Analyse en lecture seule, nettoyage via la Corbeille uniquement, 100 % local, open source.
 
 **🌍 Langues :** [English](README.md) · Français (ce fichier) — l'application elle-même est bilingue (FR/EN, détection automatique, commutable).
@@ -28,6 +30,21 @@ Les nettoyeurs de disque classiques sont des boîtes noires : on ne sait ni ce q
 - 🔒 **Local** — aucune connexion réseau sortante, aucune télémétrie, aucun compte. Le serveur web intégré n'écoute que sur `127.0.0.1`.
 - 🧠 **Prudent par conception** — un dossier inconnu n'est **jamais** classé « supprimable sans risque ». Les profils, mots de passe, wallets et données utilisateur sont détectés et intouchables.
 - 📦 **Zéro dépendance** — Node.js standard uniquement. Pas de `node_modules`, pas de supply chain à auditer.
+
+## Comparaison
+
+Comment GhostTrace se positionne face aux deux nettoyeurs de disque que la plupart des utilisateurs Windows ont déjà testés :
+
+| | GhostTrace | CCleaner | BleachBit |
+|---|---|---|---|
+| Appel réseau sortant | ❌ Aucun — vérifiable dans le code ([`src/scanner.ts`](src/scanner.ts), [`src/cleaner.ts`](src/cleaner.ts)), zéro dépendance | ✅ Oui — vérifications de mise à jour automatiques ; c'est exactement ce canal qui a été compromis lors de l'attaque de la chaîne d'approvisionnement de 2017 (voir ci-dessous) | ⚠️ Aucune télémétrie signalée par les analyses indépendantes ; comportement réseau non audité ici (code fermé) |
+| Explique chaque élément trouvé | ✅ Explication en clair pour chaque cookie/cache/trace, pas juste « sans risque » | ❌ Cases à cocher par catégorie, pas d'explication par élément | ❌ Cases à cocher par catégorie, pas d'explication par élément |
+| Suppression réversible | ✅ Corbeille uniquement, toujours — garanti dans [`src/cleaner.ts`](src/cleaner.ts) | ⚠️ Code fermé — comportement par défaut non vérifiable de l'extérieur ; une option « suppression sécurisée » distincte écrase en plus les données | ❌ Contourne la Corbeille par conception (fait pour empêcher la récupération, pas pour être annulable) |
+| Open source | ✅ MIT, code source complet sur GitHub | ❌ Propriétaire | ✅ GPLv3 |
+| Prix | Gratuit | Freemium — version gratuite + abonnement Pro payant | Gratuit |
+| Détection multi-navigateurs | ✅ Chrome, Edge, Firefox | ✅ Oui | ✅ Oui |
+
+> **Pourquoi c'est important :** en août 2017, une mise à jour officielle de CCleaner (v5.33.6162) a été compromise à la source — des attaquants présents dans le réseau de build de Piriform depuis mars 2017 ont modifié l'installeur avant sa diffusion depuis les serveurs mêmes de Piriform. Environ **2,27 millions d'utilisateurs** l'ont téléchargée avant qu'Avast (propriétaire de Piriform) ne s'en aperçoive un mois plus tard. Ce n'est pas une raison de se méfier de CCleaner aujourd'hui spécifiquement — c'est une raison de préférer des outils où « faites-nous confiance » n'est pas la seule option. GhostTrace est open source et n'effectue aucun appel réseau sortant précisément pour que cette affirmation n'ait pas à être prise sur parole. Sources : [TechCrunch, sept. 2017](https://techcrunch.com/2017/09/18/avast-reckons-ccleaner-malware-infected-2-27m-users/) · [post-mortem officiel d'Avast](https://blog.avast.com/update-ccleaner-attackers-entered-via-teamviewer).
 
 ## 🕵️ Les traces de confidentialité, expliquées — pas juste supprimées
 
@@ -66,8 +83,8 @@ Get-FileHash .\ghosttrace-v2.1.0.exe -Algorithm SHA256
 Prérequis : [Node.js](https://nodejs.org/) ≥ 22.18. Aucune dépendance à installer.
 
 ```powershell
-git clone https://github.com/umbralabsaccademy-droid/drive-cleaner.git
-cd drive-cleaner
+git clone https://github.com/umbralabsaccademy-droid/ghosttrace.git
+cd ghosttrace
 
 npm run serve        # tableau de bord web → http://localhost:7113
 npm run scan:open    # ou : scan console + rapport HTML
