@@ -1,4 +1,4 @@
-# Génère dist\appdata-analyzer.exe — exécutable autonome (aucun Node requis sur la machine cible).
+# Génère dist\ghosttrace.exe — exécutable autonome (aucun Node requis sur la machine cible).
 #
 # Méthode : Node SEA (Single Executable Application), la voie officielle Node 22 :
 #   1. esbuild bundle tout le TypeScript en UN fichier CommonJS (dist\cli.cjs)
@@ -18,7 +18,7 @@ node --experimental-sea-config sea-config.json
 if ($LASTEXITCODE -ne 0) { throw 'echec sea-config' }
 
 Write-Host '3/5 Copie de node.exe...'
-Copy-Item (Get-Command node).Source dist\appdata-analyzer.exe -Force
+Copy-Item (Get-Command node).Source dist\ghosttrace.exe -Force
 
 # L'icone et les metadonnees DOIVENT etre posees AVANT l'injection SEA :
 # modifier les ressources PE apres coup corromprait le blob injecte.
@@ -32,17 +32,17 @@ if (-not (Test-Path $rcedit) -or ((Get-FileHash $rcedit -Algorithm SHA256).Hash.
 }
 if ((Get-FileHash $rcedit -Algorithm SHA256).Hash.ToLower() -ne $rceditSha) { throw 'rcedit : empreinte SHA256 inattendue' }
 $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
-& $rcedit dist\appdata-analyzer.exe --set-icon assets\logo.ico `
-  --set-version-string ProductName 'Drive Cleaner' `
+& $rcedit dist\ghosttrace.exe --set-icon assets\logo.ico `
+  --set-version-string ProductName 'GhostTrace' `
   --set-version-string CompanyName 'Umbra Labs' `
-  --set-version-string FileDescription 'Drive Cleaner - safe Windows disk cleanup (Umbra Labs)' `
+  --set-version-string FileDescription 'GhostTrace - safe Windows junk & tracking-file cleanup (Umbra Labs)' `
   --set-version-string LegalCopyright 'MIT - Umbra Labs' `
   --set-file-version $version --set-product-version $version
 if ($LASTEXITCODE -ne 0) { throw 'echec rcedit' }
 
 Write-Host '5/5 Injection du blob (postject)...'
-npx --yes postject dist\appdata-analyzer.exe NODE_SEA_BLOB dist\sea-prep.blob --sentinel-fuse NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2
+npx --yes postject dist\ghosttrace.exe NODE_SEA_BLOB dist\sea-prep.blob --sentinel-fuse NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2
 if ($LASTEXITCODE -ne 0) { throw 'echec postject' }
 
-$exe = Get-Item dist\appdata-analyzer.exe
+$exe = Get-Item dist\ghosttrace.exe
 Write-Host ("OK -> {0} ({1:N1} Mo)" -f $exe.FullName, ($exe.Length / 1MB))

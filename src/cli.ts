@@ -62,7 +62,7 @@ function parseArgs(argv: string[]): CliArgs {
       case '--takeover': args.takeover = true; break;
       case '--help':
       case '-h':
-        console.log('Usage : appdata-analyzer [--serve] [--port 7113] [--path <AppData>] [--out <dossier>]');
+        console.log('Usage : ghosttrace [--serve] [--port 7113] [--path <AppData>] [--out <dossier>]');
         console.log('                         [--workspaces <dossier>] [--skip dev,system,apps,history]');
         console.log('                         [--concurrency N] [--open] [--auto-exit]');
         process.exit(0);

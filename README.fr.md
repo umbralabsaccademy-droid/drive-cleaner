@@ -2,9 +2,9 @@
   <a href="https://www.academy.umbra-labs.dev/"><img src="assets/logo_umbra_labs.png" alt="Umbra Labs" width="160"></a>
 </p>
 
-# 🧹 Nettoyeur d'espace disque (Drive Cleaner)
+# 👻 GhostTrace
 
-> Libérez des gigaoctets sur Windows **sans jamais risquer vos données** — analyse en lecture seule, nettoyage via la Corbeille uniquement, 100 % local, open source.
+> Supprimez fichiers inutiles et traces de télémétrie sur Windows **sans jamais risquer vos données** — analyse en lecture seule, nettoyage via la Corbeille uniquement, 100 % local, open source.
 
 **🌍 Langues :** [English](README.md) · Français (ce fichier) — l'application elle-même est bilingue (FR/EN, détection automatique, commutable).
 
@@ -37,12 +37,12 @@ Les nettoyeurs de disque classiques sont des boîtes noires : on ne sait ni ce q
 
 ### Option 1 — Exécutable (recommandé)
 
-Téléchargez `drive-cleaner-vX.Y.Z.exe` depuis la [dernière release](../../releases/latest), puis **double-cliquez** : l'interface s'ouvre dans une fenêtre d'application (le serveur local se lance en arrière-plan et s'arrête tout seul à la fermeture).
+Téléchargez `ghosttrace-vX.Y.Z.exe` depuis la [dernière release](../../releases/latest), puis **double-cliquez** : l'interface s'ouvre dans une fenêtre d'application (le serveur local se lance en arrière-plan et s'arrête tout seul à la fermeture).
 
 Chaque release est **construite depuis les sources par la CI publique GitHub Actions** ([.github/workflows/release.yml](.github/workflows/release.yml)) — les logs de build sont auditables. Vérifiez votre téléchargement avec le `SHA256SUMS.txt` publié :
 
 ```powershell
-Get-FileHash .\drive-cleaner-v2.1.0.exe -Algorithm SHA256
+Get-FileHash .\ghosttrace-v2.1.0.exe -Algorithm SHA256
 ```
 
 > ⚠️ **SmartScreen** : l'exécutable n'est pas signé numériquement (la signature coûte ~300 €/an). Windows affichera « application non reconnue » au premier lancement → « Informations complémentaires » → « Exécuter quand même ». C'est précisément pour ça que le code est open source et les builds reproductibles : auditez-le, ou construisez l'exe vous-même (option 2).
@@ -57,7 +57,7 @@ cd drive-cleaner
 
 npm run serve        # tableau de bord web → http://localhost:7113
 npm run scan:open    # ou : scan console + rapport HTML
-npm run build:exe    # construire votre propre exe (dist\appdata-analyzer.exe)
+npm run build:exe    # construire votre propre exe (dist\ghosttrace.exe)
 ```
 
 Lancez en **administrateur** pour mesurer aussi la corbeille complète, les zones Windows, les points de restauration et le Prefetch (un bouton « Relancer en admin » existe aussi dans l'interface).

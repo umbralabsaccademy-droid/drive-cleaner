@@ -2,9 +2,9 @@
   <a href="https://www.academy.umbra-labs.dev/"><img src="assets/logo_umbra_labs.png" alt="Umbra Labs" width="160"></a>
 </p>
 
-# 🧹 Drive Cleaner
+# 👻 GhostTrace
 
-> Free up gigabytes on Windows **without ever risking your data** — read-only analysis, cleanup through the Recycle Bin only, 100% local, open source.
+> Clear gigabytes of junk files and tracking/telemetry traces on Windows **without ever risking your data** — read-only analysis, cleanup through the Recycle Bin only, 100% local, open source.
 
 **🌍 Languages:** English (this file) · [Français](README.fr.md) — the app itself is bilingual (FR/EN, auto-detected, switchable).
 
@@ -49,12 +49,12 @@ Classic disk cleaners are black boxes: you don't know what they delete, why, or 
 
 ### Option 1 — Executable (recommended)
 
-Download `drive-cleaner-vX.Y.Z.exe` from the [latest release](../../releases/latest), then **double-click**: the interface opens in an app window (the local server starts in the background and stops on its own after you close the window).
+Download `ghosttrace-vX.Y.Z.exe` from the [latest release](../../releases/latest), then **double-click**: the interface opens in an app window (the local server starts in the background and stops on its own after you close the window).
 
 Each release is **built from source by the public GitHub Actions pipeline** ([.github/workflows/release.yml](.github/workflows/release.yml)) — the build logs are auditable. Verify your download against the published `SHA256SUMS.txt`:
 
 ```powershell
-Get-FileHash .\drive-cleaner-v2.1.0.exe -Algorithm SHA256
+Get-FileHash .\ghosttrace-v2.1.0.exe -Algorithm SHA256
 ```
 
 > ⚠️ **SmartScreen**: the executable is not code-signed (signing costs ~€300/year). Windows will show "unrecognized app" on first launch → "More info" → "Run anyway". That's exactly why the code is open source and the builds are reproducible: audit it, or build the exe yourself (option 2).
@@ -69,7 +69,7 @@ cd drive-cleaner
 
 npm run serve        # web dashboard → http://localhost:7113
 npm run scan:open    # or: console scan + HTML report
-npm run build:exe    # build your own exe (dist\appdata-analyzer.exe)
+npm run build:exe    # build your own exe (dist\ghosttrace.exe)
 ```
 
 `build:exe` uses Node SEA (Single Executable Application): `esbuild` bundles the sources, `postject` injects the result into a copy of `node.exe` — both tools are invoked one-shot via `npx`, nothing is added to the project.
@@ -77,9 +77,9 @@ npm run build:exe    # build your own exe (dist\appdata-analyzer.exe)
 ### Command-line options
 
 ```
-appdata-analyzer [--serve] [--port 7113] [--open] [--auto-exit]
-                 [--path <AppData>] [--out <folder>] [--workspaces <folder>]
-                 [--skip dev,system,apps,history] [--concurrency 32]
+ghosttrace [--serve] [--port 7113] [--open] [--auto-exit]
+           [--path <AppData>] [--out <folder>] [--workspaces <folder>]
+           [--skip dev,system,apps,history] [--concurrency 32]
 ```
 
 Run as **administrator** to also measure the full recycle bin, Windows areas, restore points and Prefetch (a "Relaunch as admin" button also exists in the UI).

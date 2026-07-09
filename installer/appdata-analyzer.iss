@@ -1,14 +1,14 @@
-; Installeur Inno Setup pour AppData Analyzer (grand public).
+; Installeur Inno Setup pour GhostTrace (grand public).
 ; Compiler avec Inno Setup 6 (https://jrsoftware.org/isinfo.php) :
 ;   iscc installer\appdata-analyzer.iss
-; Prérequis : avoir généré dist\appdata-analyzer.exe (npm run build:exe).
+; Prérequis : avoir généré dist\ghosttrace.exe (npm run build:exe).
 ;
 ; Choix : installation par utilisateur (pas d'admin requis pour installer),
 ; raccourcis Menu Démarrer + Bureau (optionnel), désinstallation propre.
 
-#define AppName "Drive Cleaner"
+#define AppName "GhostTrace"
 #define AppVersion "2.1.0"
-#define AppExe "appdata-analyzer.exe"
+#define AppExe "ghosttrace.exe"
 
 [Setup]
 AppId={{B7E31F0C-9A44-4E1B-8E2D-AA57C1D24F91}
@@ -17,11 +17,11 @@ AppVersion={#AppVersion}
 AppPublisher=Umbra Labs
 AppPublisherURL=https://www.academy.umbra-labs.dev/
 AppSupportURL=https://github.com/umbralabsaccademy-droid/drive-cleaner
-DefaultDirName={userpf}\AppDataAnalyzer
+DefaultDirName={userpf}\GhostTrace
 DefaultGroupName={#AppName}
 PrivilegesRequired=lowest
 OutputDir=..\dist
-OutputBaseFilename=drive-cleaner-setup
+OutputBaseFilename=ghosttrace-setup
 Compression=lzma2
 SolidCompression=yes
 DisableProgramGroupPage=yes

@@ -380,7 +380,7 @@ function dashboardHtml(opts: ServerOptions): string {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" href="/favicon.ico">
-<title>Drive Cleaner</title>
+<title>GhostTrace</title>
 <style>
   :root {
     --bg: #12141a; --panel: #1c1f28; --panel2: #232734; --text: #e6e8ee; --muted: #9aa0b0;
@@ -578,8 +578,8 @@ function dashboardHtml(opts: ServerOptions): string {
 // ===== i18n dictionary =====
 const I18N = {
   fr: {
-    sTitle: '🧹 Nettoyeur d\\'espace disque',
-    sSubtitle: 'Libérez de la place en toute sécurité — tout ce qui est nettoyé va dans la Corbeille.',
+    sTitle: '👻 GhostTrace',
+    sSubtitle: 'Supprimez fichiers inutiles et traces en toute sécurité — tout ce qui est nettoyé va dans la Corbeille.',
     sIntro: 'Cliquez pour analyser votre ordinateur. <b>Rien n\\'est supprimé</b> pendant l\\'analyse : vous choisirez ensuite.',
     sScan: '🔍 Analyser mon ordinateur',
     sProgressHint: 'Cela prend généralement une à trois minutes. Vos fichiers ne sont pas modifiés.',
@@ -609,7 +609,7 @@ const I18N = {
     cleaning: 'Nettoyage en cours…',
     cleaningN: (d, t) => 'Nettoyage… (' + d + '/' + t + ')',
     phases: { appdata: 'Recherche des fichiers temporaires…', msix: 'Vérifications de sécurité…', system: 'Analyse des fichiers Windows…', application: 'Analyse des programmes installés…', report: 'Préparation des résultats…', developer: 'Analyse des dossiers de travail…', default: 'Analyse en cours…' },
-    eTitle: '🔍 AppData Analyzer <span class="chip yellow">expert</span>',
+    eTitle: '👻 GhostTrace <span class="chip yellow">expert</span>',
     eSubtitle: (p, w) => 'Cible : ' + p + ' · Workspaces : ' + w + ' · analyse en lecture seule, nettoyage via Corbeille uniquement.',
     eScan: '▶ Lancer le scan',
     modDev: 'Caches dev', modSystem: 'Système', modApps: 'Applications',
@@ -631,7 +631,7 @@ const I18N = {
     admin: 'admin', copy: 'copier', copied: 'copié ✓',
     obNext: 'Continuer', obStart: 'C\\'est parti !',
     ob: [
-      ['🧹', 'Bienvenue !', 'Cet outil analyse votre ordinateur et trouve les fichiers inutiles qui prennent de la place, comme les fichiers temporaires et les restes de programmes désinstallés.'],
+      ['👻', 'Bienvenue !', 'Cet outil analyse votre ordinateur et trouve les fichiers inutiles et les traces qui prennent de la place, comme les fichiers temporaires, la télémétrie et les restes de programmes désinstallés.'],
       ['🔒', 'Vos données sont protégées', 'Il ne touche jamais à vos documents, photos, mots de passe ou réglages. Seuls des fichiers sans danger, que Windows ou vos applications recréent tout seuls, sont proposés.'],
       ['♻️', 'Toujours réversible', 'Tout ce qui est nettoyé part dans la Corbeille. En cas de doute, vous pouvez tout restaurer pendant environ 30 jours.'],
       ['🛠', 'Pour les connaisseurs', 'Un mode Expert (bouton en haut à droite) donne accès au détail technique : rapports complets, commandes, éléments avancés. Pour l\\'usage courant, le mode Simple suffit.'],
@@ -639,8 +639,8 @@ const I18N = {
     dateLocale: 'fr-FR',
   },
   en: {
-    sTitle: '🧹 Drive Cleaner',
-    sSubtitle: 'Free up space safely — everything cleaned goes to the Recycle Bin.',
+    sTitle: '👻 GhostTrace',
+    sSubtitle: 'Clear junk files and tracking traces safely — everything cleaned goes to the Recycle Bin.',
     sIntro: 'Click to analyze your computer. <b>Nothing is deleted</b> during the analysis: you choose afterwards.',
     sScan: '🔍 Analyze my computer',
     sProgressHint: 'This usually takes one to three minutes. Your files are not modified.',
@@ -670,7 +670,7 @@ const I18N = {
     cleaning: 'Cleaning…',
     cleaningN: (d, t) => 'Cleaning… (' + d + '/' + t + ')',
     phases: { appdata: 'Looking for temporary files…', msix: 'Safety checks…', system: 'Analyzing Windows files…', application: 'Analyzing installed programs…', report: 'Preparing the results…', developer: 'Analyzing work folders…', default: 'Analyzing…' },
-    eTitle: '🔍 AppData Analyzer <span class="chip yellow">expert</span>',
+    eTitle: '👻 GhostTrace <span class="chip yellow">expert</span>',
     eSubtitle: (p, w) => 'Target: ' + p + ' · Workspaces: ' + w + ' · read-only analysis, cleanup via Recycle Bin only.',
     eScan: '▶ Run scan',
     modDev: 'Dev caches', modSystem: 'System', modApps: 'Applications',
@@ -692,7 +692,7 @@ const I18N = {
     admin: 'admin', copy: 'copy', copied: 'copied ✓',
     obNext: 'Continue', obStart: 'Let\\'s go!',
     ob: [
-      ['🧹', 'Welcome!', 'This tool analyzes your computer and finds the useless files taking up space, such as temporary files and leftovers from uninstalled programs.'],
+      ['👻', 'Welcome!', 'This tool analyzes your computer and finds junk files and tracking traces taking up space, such as temporary files, telemetry caches, and leftovers from uninstalled programs.'],
       ['🔒', 'Your data is protected', 'It never touches your documents, photos, passwords or settings. Only safe files, which Windows or your applications recreate on their own, are offered.'],
       ['♻️', 'Always reversible', 'Everything cleaned goes to the Recycle Bin. If in doubt, you can restore everything for about 30 days.'],
       ['🛠', 'For power users', 'An Expert mode (button at the top right) gives access to technical detail: full reports, commands, advanced items. For everyday use, Simple mode is enough.'],
@@ -719,7 +719,7 @@ const SERVER = { appData: '${esc(opts.appDataPath).replace(/\\/g, '\\\\')}', wor
 function applyLang() {
   T = I18N[lang];
   document.documentElement.lang = lang;
-  document.title = lang === 'fr' ? 'Nettoyeur d\\'espace disque' : 'Drive Cleaner';
+  document.title = 'GhostTrace';
   $('seg-fr').classList.toggle('active', lang === 'fr');
   $('seg-en').classList.toggle('active', lang === 'en');
   // Static texts

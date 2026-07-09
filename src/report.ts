@@ -210,7 +210,7 @@ export function renderHtml(a: Analysis): string {
 <head>
 <meta charset="utf-8">
 <link rel="icon" href="/favicon.ico">
-<title>AppData Analyzer — ${esc(a.scanDate.slice(0, 10))}</title>
+<title>GhostTrace — ${esc(a.scanDate.slice(0, 10))}</title>
 <style>
   :root {
     --bg: #12141a; --panel: #1c1f28; --panel2: #232734; --text: #e6e8ee; --muted: #9aa0b0;
@@ -273,7 +273,7 @@ export function renderHtml(a: Analysis): string {
 </head>
 <body>
 <div id="langbar"><button data-l="fr" id="lg-fr">FR</button><button data-l="en" id="lg-en">EN</button></div>
-<h1>🔍 AppData Analyzer</h1>
+<h1>👻 GhostTrace</h1>
 <div class="sub" id="subtitle"></div>
 <div style="margin:-8px 0 16px"><button class="copy" id="psadmin" style="font-size:13px;padding:6px 14px"></button></div>
 <div class="cards" id="cards"></div>

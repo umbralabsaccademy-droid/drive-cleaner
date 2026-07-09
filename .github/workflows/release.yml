@@ -10,7 +10,7 @@
 # - The exe is built from source on a public runner: anyone can audit the
 #   logs and reproduce the build (`npm run build:exe`).
 # - A SHA256SUMS.txt is published next to the exe so users can verify their
-#   download: Get-FileHash .\drive-cleaner-vX.Y.Z.exe -Algorithm SHA256
+#   download: Get-FileHash .\ghosttrace-vX.Y.Z.exe -Algorithm SHA256
 name: Release
 
 on:
@@ -38,9 +38,9 @@ jobs:
         shell: pwsh
         run: |
           $v = '${{ github.ref_name }}'
-          Copy-Item dist/appdata-analyzer.exe "dist/drive-cleaner-$v.exe"
-          $h = Get-FileHash "dist/drive-cleaner-$v.exe" -Algorithm SHA256
-          "$($h.Hash.ToLower())  drive-cleaner-$v.exe" | Out-File dist/SHA256SUMS.txt -Encoding ascii
+          Copy-Item dist/ghosttrace.exe "dist/ghosttrace-$v.exe"
+          $h = Get-FileHash "dist/ghosttrace-$v.exe" -Algorithm SHA256
+          "$($h.Hash.ToLower())  ghosttrace-$v.exe" | Out-File dist/SHA256SUMS.txt -Encoding ascii
           Get-Content dist/SHA256SUMS.txt
 
       - name: Create GitHub Release
@@ -50,7 +50,7 @@ jobs:
         run: |
           $v = '${{ github.ref_name }}'
           gh release create $v `
-            "dist/drive-cleaner-$v.exe" `
+            "dist/ghosttrace-$v.exe" `
             "dist/SHA256SUMS.txt" `
-            --title "Drive Cleaner $v" `
+            --title "GhostTrace $v" `
             --generate-notes
