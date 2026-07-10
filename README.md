@@ -4,11 +4,13 @@
 
 # 👻 GhostTrace
 
+![GhostTrace demo](assets/screenshots/demo.gif)
+
 > See exactly what tracks you on Windows — cookies, browsing history, Prefetch, activity timeline — and clear gigabytes of ordinary junk alongside it, **without ever risking your data**. Read-only analysis, cleanup through the Recycle Bin only, 100% local, open source.
 
 **🌍 Languages:** English (this file) · [Français](README.fr.md) — the app itself is bilingual (FR/EN, auto-detected, switchable).
 
-[![Latest release](https://img.shields.io/github/v/release/umbralabsaccademy-droid/drive-cleaner?label=download)](../../releases/latest)
+[![Latest release](https://img.shields.io/github/v/release/umbralabsaccademy-droid/ghosttrace?label=download)](../../releases/latest)
 [![MIT License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 ![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-blue.svg)
 ![Node](https://img.shields.io/badge/node-%E2%89%A5%2022.18-brightgreen.svg)
@@ -29,6 +31,21 @@ Classic disk cleaners are black boxes: you don't know what they delete, why, or 
 - 🔒 **Local** — no outbound network connection, no telemetry, no account. The built-in web server only listens on `127.0.0.1`.
 - 🧠 **Cautious by design** — an unknown folder is **never** classified "safe to delete". Profiles, passwords, wallets and user data are detected and untouchable.
 - 📦 **Zero dependencies** — standard Node.js only. No `node_modules`, no supply chain to audit.
+
+## Comparison
+
+How GhostTrace stacks up against the two disk cleaners most Windows users have already tried:
+
+| | GhostTrace | CCleaner | BleachBit |
+|---|---|---|---|
+| Outbound network call | ❌ None — verifiable in the code ([`src/scanner.ts`](src/scanner.ts), [`src/cleaner.ts`](src/cleaner.ts)), zero dependencies | ✅ Yes — automatic update checks; this is the exact channel that was compromised in the 2017 supply-chain attack (see below) | ⚠️ No telemetry reported by independent reviews; closed-box on network behavior, not independently audited here |
+| Explains each item found | ✅ Plain-language purpose for every cookie/cache/trace, not just "safe to delete" | ❌ Category checkboxes, no per-item explanation | ❌ Category checkboxes, no per-item explanation |
+| Reversible cleanup | ✅ Recycle Bin only, always — enforced in [`src/cleaner.ts`](src/cleaner.ts) | ⚠️ Closed source — default behavior not independently verifiable from outside; a separate "secure deletion" option additionally overwrites data | ❌ Bypasses the Recycle Bin by design (built to prevent recovery, not to be undoable) |
+| Open source | ✅ MIT, full source on GitHub | ❌ Proprietary | ✅ GPLv3 |
+| Price | Free | Freemium — free tier + paid Pro subscription | Free |
+| Multi-browser detection | ✅ Chrome, Edge, Firefox | ✅ Yes | ✅ Yes |
+
+> **Why this matters:** in August 2017, an official CCleaner update (v5.33.6162) was compromised at the source — attackers had been inside Piriform's build network since March 2017 and modified the installer before it shipped from Piriform's own servers. An estimated **2.27 million users** downloaded it before Avast (Piriform's owner) caught it a month later. That's not a reason to distrust CCleaner specifically today — it's a reason to prefer tools where "trust us" isn't the only option available. GhostTrace is open source and makes zero outbound network calls precisely so that claim doesn't have to be taken on faith. Sources: [TechCrunch, Sept. 2017](https://techcrunch.com/2017/09/18/avast-reckons-ccleaner-malware-infected-2-27m-users/) · [Avast official post-mortem](https://blog.avast.com/update-ccleaner-attackers-entered-via-teamviewer).
 
 ## 🕵️ Privacy traces, explained — not just deleted
 
@@ -79,8 +96,8 @@ Get-FileHash .\ghosttrace-v2.1.0.exe -Algorithm SHA256
 Prerequisite: [Node.js](https://nodejs.org/) ≥ 22.18 (native TypeScript execution). No dependencies to install.
 
 ```powershell
-git clone https://github.com/umbralabsaccademy-droid/drive-cleaner.git
-cd drive-cleaner
+git clone https://github.com/umbralabsaccademy-droid/ghosttrace.git
+cd ghosttrace
 
 npm run serve        # web dashboard → http://localhost:7113
 npm run scan:open    # or: console scan + HTML report
@@ -160,9 +177,13 @@ Issues and pull requests welcome. No external dependencies — that's a principl
 
 **Why is the exe 83 MB?** It embeds the full Node.js runtime (Node SEA): zero prerequisites on your machine in exchange.
 
-**My antivirus flags it.** Unsigned exe + built by injecting into node.exe = occasionally grumpy heuristics. The code is open — build the exe yourself if you prefer.
+**My antivirus flags it.** Unsigned exe + built by injecting into node.exe = occasionally grumpy heuristics. The code is open — build the exe yourself if you prefer. Signing wouldn't be a quick fix either: an EV code-signing certificate that suppresses the SmartScreen warning is a recurring bill of roughly **$280–580/year** (Sectigo, DigiCert), which is out of scope for a free, solo-maintained project with no revenue to draw it from. You don't have to take "it's clean" on faith: grab `ghosttrace-vX.Y.Z.exe` and the matching `SHA256SUMS.txt` from the [latest release](../../releases/latest), then either verify the hash locally (`Get-FileHash`, command above) or drop the file straight into [VirusTotal](https://www.virustotal.com) — free, no signup, 70+ antivirus engines report back in under 30 seconds. For v2.1.5 specifically, the published hash is `f27a3dd8b624dc6438c47385a7ab262f4572d4f69f98238539ff57f5336ca7db` — you can look it up directly at `virustotal.com/gui/file/f27a3dd8b624dc6438c47385a7ab262f4572d4f69f98238539ff57f5336ca7db`.
 
-**Is any data sent anywhere?** No. No outbound network request — verifiable in the code (the only server is local).
+**Is any data sent anywhere?** No. No outbound network request — and that's not something you need to take on faith. The two modules that touch your disk import nothing but Node's own file-system and process builtins — no `http`, `https`, `net`, `dns`, `tls`, or `fetch` anywhere in them:
+- [`src/scanner.ts`](src/scanner.ts) — the read-only analysis engine, imports only `node:fs/promises` and `node:path`
+- [`src/cleaner.ts`](src/cleaner.ts) — the cleanup engine, imports only `node:child_process` (to call the local `powershell.exe` and invoke the .NET Recycle Bin API — see the safety contract below) and `node:fs/promises`
+
+The only place `node:http` appears in the whole project is [`src/server.ts`](src/server.ts), and it's there to *serve* the local dashboard bound to `127.0.0.1` — not to call out anywhere. Zero dependencies (check `package.json`) also means there's no third-party library hiding a phone-home call either. Open any file in `src/` and search for those import names yourself — that's the whole surface area.
 
 **The cleaned files come back!** That's normal: caches and temp files regenerate with use. The tool tells you so honestly — come back every two or three months.
 

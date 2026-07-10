@@ -7,7 +7,7 @@
   "homepage": "https://www.academy.umbra-labs.dev/",
   "repository": {
     "type": "git",
-    "url": "https://github.com/umbralabsaccademy-droid/drive-cleaner.git"
+    "url": "https://github.com/umbralabsaccademy-droid/ghosttrace.git"
   },
   "type": "module",
   "private": true,
