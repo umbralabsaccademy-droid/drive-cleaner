@@ -4,7 +4,7 @@
 
 # 👻 GhostTrace
 
-![Démo GhostTrace](assets/screenshots/demo.gif)
+![GhostTrace : les traces de vie privée expliquées en clair, pas juste signalées à la suppression](assets/screenshots/scan-simpe-trace-explanation-privacy.png)
 
 > Découvrez précisément ce qui vous trace sur Windows — cookies, historique de navigation, Prefetch, chronologie d'activité — et supprimez des gigas de fichiers inutiles au passage, **sans jamais risquer vos données**. Analyse en lecture seule, nettoyage via la Corbeille uniquement, 100 % local, open source.
 
@@ -63,6 +63,31 @@ Tout ce qui précède passe par le même filet de sécurité que le nettoyage d'
 **Mode Simple** (par défaut) — pour tout le monde : un bouton « Analyser mon ordinateur », des explications en français courant, réparties en deux groupes clairement identifiés (💾 *Espace disque* / 🕵️ *Vie privée*), et seuls les éléments **certifiés sans risque** par la base de règles sont proposés. Écrans d'explication au premier lancement.
 
 **Mode Expert** (sélecteur en haut à droite) — pour les technophiles : le même découpage 💾/🕵️ avec un filtre rapide, détail complet par dossier (AppData niveaux 1-2, caches développeur, zones système, applications inutilisées), catégories 🟢/🟡/🔴, commandes PowerShell prêtes à copier, rapports HTML/JSON archivables, suivi de l'évolution entre les scans, relance en admin.
+
+## Captures d'écran
+
+> Interface capturée en anglais (bascule FR/EN visible en haut de chaque écran) — l'application est bilingue, mais les visuels de démonstration n'ont pour l'instant été pris que dans une langue.
+
+<table>
+<tr><td align="center" colspan="2"><strong>Mode Simple</strong></td></tr>
+<tr>
+<td width="50%"><img src="assets/screenshots/scan-simple.png" alt="Mode Simple, prêt à scanner"><br><sub>Prêt à scanner</sub></td>
+<td width="50%"><img src="assets/screenshots/scan-simple-running.png" alt="Mode Simple, scan en cours"><br><sub>Scan en cours</sub></td>
+</tr>
+<tr>
+<td width="50%"><img src="assets/screenshots/scan-simpe-trace-explanation-privacy.png" alt="Mode Simple, traces de vie privée expliquées"><br><sub>Traces de vie privée, expliquées</sub></td>
+<td width="50%"><img src="assets/screenshots/scan-simpe-trace-explanation-disk.png" alt="Mode Simple, éléments disque expliqués"><br><sub>Éléments disque, expliqués</sub></td>
+</tr>
+<tr><td align="center" colspan="2"><strong>Mode Expert</strong></td></tr>
+<tr>
+<td width="50%"><img src="assets/screenshots/expert-mode.png" alt="Tableau de bord Mode Expert et historique des rapports"><br><sub>Tableau de bord &amp; historique</sub></td>
+<td width="50%"><img src="assets/screenshots/expert-mode-history.png" alt="Journal de nettoyage Mode Expert"><br><sub>Journal de nettoyage</sub></td>
+</tr>
+<tr>
+<td width="50%"><img src="assets/screenshots/expert-mode-trace-explanation-privacy.png" alt="Mode Expert, traces de vie privée expliquées"><br><sub>Traces de vie privée, expliquées</sub></td>
+<td width="50%"><img src="assets/screenshots/expert-mode-trace-explanation-disk.png" alt="Mode Expert, éléments disque expliqués"><br><sub>Éléments disque, expliqués</sub></td>
+</tr>
+</table>
 
 ## Installation
 

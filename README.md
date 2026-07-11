@@ -4,7 +4,7 @@
 
 # 👻 GhostTrace
 
-![GhostTrace demo](assets/screenshots/demo.gif)
+![GhostTrace: privacy traces explained in plain language, not just flagged for deletion](assets/screenshots/scan-simpe-trace-explanation-privacy.png)
 
 > See exactly what tracks you on Windows — cookies, browsing history, Prefetch, activity timeline — and clear gigabytes of ordinary junk alongside it, **without ever risking your data**. Read-only analysis, cleanup through the Recycle Bin only, 100% local, open source.
 
@@ -64,6 +64,29 @@ Everything above still goes through the same Recycle Bin safety net as disk-spac
 **Simple mode** (default) — for everyone: one "Analyze my computer" button, plain-language explanations, split into two clearly labeled groups (💾 *Disk space* / 🕵️ *Privacy*), and only items **certified safe** by the rule base are offered. Explanation screens on first launch.
 
 **Expert mode** (selector at the top right) — for technical users: the same 💾/🕵️ split plus a quick filter, full detail per folder (AppData levels 1-2, developer caches, system areas, unused applications), 🟢/🟡/🔴 categories, ready-to-copy PowerShell commands, archivable HTML/JSON reports, scan-over-scan evolution tracking, relaunch as admin.
+
+## Screenshots
+
+<table>
+<tr><td align="center" colspan="2"><strong>Simple mode</strong></td></tr>
+<tr>
+<td width="50%"><img src="assets/screenshots/scan-simple.png" alt="Simple mode, ready to scan"><br><sub>Ready to scan</sub></td>
+<td width="50%"><img src="assets/screenshots/scan-simple-running.png" alt="Simple mode, scan in progress"><br><sub>Scan in progress</sub></td>
+</tr>
+<tr>
+<td width="50%"><img src="assets/screenshots/scan-simpe-trace-explanation-privacy.png" alt="Simple mode, privacy traces explained"><br><sub>Privacy traces, explained</sub></td>
+<td width="50%"><img src="assets/screenshots/scan-simpe-trace-explanation-disk.png" alt="Simple mode, disk items explained"><br><sub>Disk items, explained</sub></td>
+</tr>
+<tr><td align="center" colspan="2"><strong>Expert mode</strong></td></tr>
+<tr>
+<td width="50%"><img src="assets/screenshots/expert-mode.png" alt="Expert mode dashboard and report history"><br><sub>Dashboard &amp; report history</sub></td>
+<td width="50%"><img src="assets/screenshots/expert-mode-history.png" alt="Expert mode cleanup journal"><br><sub>Cleanup journal</sub></td>
+</tr>
+<tr>
+<td width="50%"><img src="assets/screenshots/expert-mode-trace-explanation-privacy.png" alt="Expert mode, privacy traces explained"><br><sub>Privacy traces, explained</sub></td>
+<td width="50%"><img src="assets/screenshots/expert-mode-trace-explanation-disk.png" alt="Expert mode, disk items explained"><br><sub>Disk items, explained</sub></td>
+</tr>
+</table>
 
 ## Features
 
